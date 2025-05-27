@@ -5,10 +5,8 @@ from datetime import datetime
 from docx import Document
 import base64
 
-# Configuração da página
 st.set_page_config(page_title="Registro de Ocorrências", layout="centered")
 
-# Função para aplicar imagem de fundo com transparência de 50%
 def set_background(png_file):
     with open(png_file, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
@@ -34,17 +32,14 @@ def set_background(png_file):
 
 set_background("Design_sem_nome-removebg-preview.png")
 
-# Brasão no topo
 doc_logo = "BRASÃO.png"
 st.image(doc_logo, width=150)
 st.markdown("## **Registro de Ocorrências – Colégio Cívico-Militar do Paraná**")
 st.markdown("---")
 
-# Conexão com banco de dados
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
-# Cria tabela se não existir
 c.execute('''
 CREATE TABLE IF NOT EXISTS ocorrencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,12 +53,16 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
     fatos TEXT
 )
 ''')
+try:
+    c.execute("ALTER TABLE ocorrencias ADD COLUMN agente_aplicador TEXT")
+except sqlite3.OperationalError:
+    pass
 conn.commit()
 
-# Funções auxiliares
 def inserir_ocorrencia(dados):
-    c.execute('''INSERT INTO ocorrencias (cgm, nome_aluno, nome_responsavel, telefone_responsavel, turma, ano, data, fatos)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', dados)
+    c.execute('''INSERT INTO ocorrencias (
+        cgm, nome_aluno, nome_responsavel, telefone_responsavel, turma, ano, data, fatos, agente_aplicador
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', dados)
     conn.commit()
 
 def buscar_ocorrencias(cgm):
@@ -91,7 +90,6 @@ def exportar_para_docx(dados_aluno, registros):
     doc.save(nome_arquivo)
     return nome_arquivo
 
-# Interface de abas
 aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
 
 with aba[0]:
@@ -110,6 +108,7 @@ with aba[0]:
         telefone_responsavel = st.text_input("Telefone do responsável", value="" if st.session_state.limpar else "")
         turma = st.text_input("Turma", value="" if st.session_state.limpar else "")
         ano = st.text_input("Ano", value="" if st.session_state.limpar else "")
+        agente_aplicador = st.text_input("Agente Aplicador", value="" if st.session_state.limpar else "")
         data = st.date_input("Data", value=datetime.today())
         fatos = st.text_area("Fatos ocorridos", value="" if st.session_state.limpar else "")
 
@@ -117,20 +116,15 @@ with aba[0]:
 
         if submitted:
             inserir_ocorrencia((
-                cgm,
-                nome_aluno,
-                nome_responsavel,
-                telefone_responsavel,
-                turma,
-                ano,
-                data.strftime("%Y-%m-%d"),
-                fatos
+                cgm, nome_aluno, nome_responsavel, telefone_responsavel,
+                turma, ano, data.strftime("%Y-%m-%d"), fatos, agente_aplicador
             ))
             st.success("Ocorrência registrada com sucesso!")
             st.session_state.limpar = True
 
     if st.session_state.limpar:
         st.session_state.limpar = False
+
 
 with aba[1]:
     st.subheader("Consultar por CGM")
@@ -151,8 +145,10 @@ with aba[2]:
             for i, row in resultados.iterrows():
                 with st.expander(f"{row['data']} - {row['fatos'][:30]}..."):
                     novo_fato = st.text_area("Editar fatos", row['fatos'], key=f"edit_{row['id']}")
+                    novo_aplicador = st.text_input("Editar Agente Aplicador", row['agente_aplicador'] if 'agente_aplicador' in row else "", key=f"aplicador_{row['id']}")
                     if st.button("Salvar edição", key=f"save_{row['id']}"):
                         atualizar_ocorrencia(row['id'], 'fatos', novo_fato)
+                        atualizar_ocorrencia(row['id'], 'agente_aplicador', novo_aplicador)
                         st.success("Atualizado!")
                     if st.button("🗑️ Excluir", key=f"delete_{row['id']}"):
                         deletar_ocorrencia(row['id'])
@@ -173,6 +169,21 @@ with aba[3]:
             filtrado = dados[(dados["data"] >= pd.to_datetime(data_ini)) & (dados["data"] <= pd.to_datetime(data_fim))]
             if not filtrado.empty:
                 if st.button("📄 Exportar para Word"):
+                    def exportar_para_docx(dados_aluno, registros):
+                        doc = Document()
+                        doc.add_picture(doc_logo, width=doc.sections[0].page_width * 0.2)
+                        doc.add_heading("Registro de Ocorrências", level=1)
+                        doc.add_paragraph(f"Nome do Aluno: {dados_aluno['nome_aluno']}")
+                        doc.add_paragraph(f"CGM: {dados_aluno['cgm']}")
+                        doc.add_paragraph(f"Turma: {dados_aluno['turma']} | Ano: {dados_aluno['ano']}")
+                        doc.add_paragraph("Fatos:")
+                        for _, row in registros.iterrows():
+                            agente = row['agente_aplicador'] if 'agente_aplicador' in row and row['agente_aplicador'] else "N/A"
+                            doc.add_paragraph(f"{row['data']} - {agente}: {row['fatos']}", style='Normal')
+                        nome_arquivo = f"Ocorrencias_{dados_aluno['nome_aluno'].replace(' ', '_')}.docx"
+                        doc.save(nome_arquivo)
+                        return nome_arquivo
+
                     nome_arquivo = exportar_para_docx(filtrado.iloc[0], filtrado)
                     with open(nome_arquivo, "rb") as f:
                         st.download_button("Clique para baixar o DOCX", f, file_name=nome_arquivo)
