@@ -20,7 +20,7 @@ def set_background(png_file):
     background-size: cover;
     background-repeat: no-repeat;
     background-attachment: fixed;
-    background-position: 30%;
+    background-position: center;
 }}
 .main .block-container {{
     background-color: rgba(255, 255, 255, 0.85);
