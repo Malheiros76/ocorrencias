@@ -13,24 +13,26 @@ def set_background(png_file):
     with open(png_file, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
     css = f"""
-    <style>
-    .stApp {{
-        background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
-                    url("data:image/png;base64,{encoded}");
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-position: center;
-    }}
-    .main .block-container {{
-        background-color: rgba(255, 255, 255, 0.85);
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }}
-    </style>
+<style>
+.stApp {{
+    background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
+                url("data:image/png;base64,{encoded}");
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center;
+}}
+.main .block-container {{
+    background-color: rgba(255, 255, 255, 0.85);
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}}
+</style>
     """
     st.markdown(css, unsafe_allow_html=True)
+
+set_background("Design_sem_nome-removebg-preview.png")
 
 # Brasão no topo
 doc_logo = "BRASÃO.png"
@@ -94,19 +96,41 @@ aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerencia
 
 with aba[0]:
     st.subheader("Registrar Ocorrência")
+
+    if "limpar" not in st.session_state:
+        st.session_state.limpar = False
+
+    if st.button("🧹 Limpar"):
+        st.session_state.limpar = True
+
     with st.form("registro_form"):
-        cgm = st.text_input("CGM")
-        nome_aluno = st.text_input("Nome do aluno")
-        nome_responsavel = st.text_input("Nome do responsável")
-        telefone_responsavel = st.text_input("Telefone do responsável")
-        turma = st.text_input("Turma")
-        ano = st.text_input("Ano")
-        data = st.date_input("Data", value=datetime.today()).strftime("%Y-%m-%d")
-        fatos = st.text_area("Fatos ocorridos")
+        cgm = st.text_input("CGM", value="" if st.session_state.limpar else "")
+        nome_aluno = st.text_input("Nome do aluno", value="" if st.session_state.limpar else "")
+        nome_responsavel = st.text_input("Nome do responsável", value="" if st.session_state.limpar else "")
+        telefone_responsavel = st.text_input("Telefone do responsável", value="" if st.session_state.limpar else "")
+        turma = st.text_input("Turma", value="" if st.session_state.limpar else "")
+        ano = st.text_input("Ano", value="" if st.session_state.limpar else "")
+        data = st.date_input("Data", value=datetime.today())
+        fatos = st.text_area("Fatos ocorridos", value="" if st.session_state.limpar else "")
+
         submitted = st.form_submit_button("Salvar")
+
         if submitted:
-            inserir_ocorrencia((cgm, nome_aluno, nome_responsavel, telefone_responsavel, turma, ano, data, fatos))
+            inserir_ocorrencia((
+                cgm,
+                nome_aluno,
+                nome_responsavel,
+                telefone_responsavel,
+                turma,
+                ano,
+                data.strftime("%Y-%m-%d"),
+                fatos
+            ))
             st.success("Ocorrência registrada com sucesso!")
+            st.session_state.limpar = True
+
+    if st.session_state.limpar:
+        st.session_state.limpar = False
 
 with aba[1]:
     st.subheader("Consultar por CGM")
