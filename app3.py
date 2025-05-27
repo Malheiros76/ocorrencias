@@ -92,39 +92,50 @@ def exportar_para_docx(dados_aluno, registros):
 
 aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
 
+
 with aba[0]:
     st.subheader("Registrar Ocorrência")
 
-    if "limpar" not in st.session_state:
-        st.session_state.limpar = False
+    # Inicializar campos no session_state
+    for campo in ["cgm", "nome_aluno", "nome_responsavel", "telefone_responsavel",
+                  "turma", "ano", "agente_aplicador", "fatos"]:
+        if campo not in st.session_state:
+            st.session_state[campo] = ""
 
     if st.button("🧹 Limpar"):
-        st.session_state.limpar = True
+        for campo in ["cgm", "nome_aluno", "nome_responsavel", "telefone_responsavel",
+                      "turma", "ano", "agente_aplicador", "fatos"]:
+            st.session_state[campo] = ""
 
     with st.form("registro_form"):
-        cgm = st.text_input("CGM", value="" if st.session_state.limpar else "")
-        nome_aluno = st.text_input("Nome do aluno", value="" if st.session_state.limpar else "")
-        nome_responsavel = st.text_input("Nome do responsável", value="" if st.session_state.limpar else "")
-        telefone_responsavel = st.text_input("Telefone do responsável", value="" if st.session_state.limpar else "")
-        turma = st.text_input("Turma", value="" if st.session_state.limpar else "")
-        ano = st.text_input("Ano", value="" if st.session_state.limpar else "")
-        agente_aplicador = st.text_input("Agente Aplicador", value="" if st.session_state.limpar else "")
+        st.session_state["cgm"] = st.text_input("CGM", value=st.session_state["cgm"])
+        st.session_state["nome_aluno"] = st.text_input("Nome do aluno", value=st.session_state["nome_aluno"])
+        st.session_state["nome_responsavel"] = st.text_input("Nome do responsável", value=st.session_state["nome_responsavel"])
+        st.session_state["telefone_responsavel"] = st.text_input("Telefone do responsável", value=st.session_state["telefone_responsavel"])
+        st.session_state["turma"] = st.text_input("Turma", value=st.session_state["turma"])
+        st.session_state["ano"] = st.text_input("Ano", value=st.session_state["ano"])
+        st.session_state["agente_aplicador"] = st.text_input("Agente Aplicador", value=st.session_state["agente_aplicador"])
         data = st.date_input("Data", value=datetime.today())
-        fatos = st.text_area("Fatos ocorridos", value="" if st.session_state.limpar else "")
+        st.session_state["fatos"] = st.text_area("Fatos ocorridos", value=st.session_state["fatos"])
 
         submitted = st.form_submit_button("Salvar")
 
         if submitted:
             inserir_ocorrencia((
-                cgm, nome_aluno, nome_responsavel, telefone_responsavel,
-                turma, ano, data.strftime("%Y-%m-%d"), fatos, agente_aplicador
+                st.session_state["cgm"],
+                st.session_state["nome_aluno"],
+                st.session_state["nome_responsavel"],
+                st.session_state["telefone_responsavel"],
+                st.session_state["turma"],
+                st.session_state["ano"],
+                data.strftime("%Y-%m-%d"),
+                st.session_state["fatos"],
+                st.session_state["agente_aplicador"]
             ))
             st.success("Ocorrência registrada com sucesso!")
-            st.session_state.limpar = True
-
-    if st.session_state.limpar:
-        st.session_state.limpar = False
-
+            for campo in ["cgm", "nome_aluno", "nome_responsavel", "telefone_responsavel",
+                          "turma", "ano", "agente_aplicador", "fatos"]:
+                st.session_state[campo] = ""
 
 with aba[1]:
     st.subheader("Consultar por CGM")
