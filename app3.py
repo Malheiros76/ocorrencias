@@ -17,9 +17,9 @@ def set_background(png_file):
 .stApp {{
     background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
                 url("data:image/png;base64,{encoded}");
-    background-size: cover;
+    background-size: 30%;
     background-repeat: no-repeat;
-    background-attachment: auto;
+    background-attachment: fixed;
     background-position: center;
 }}
 .main .block-container {{
