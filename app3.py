@@ -8,39 +8,29 @@ import base64
 # Configuração da página
 st.set_page_config(page_title="Registro de Ocorrências", layout="centered")
 
-# Função para aplicar imagem de fundo e negrito nas labels
+# Função para aplicar imagem de fundo com transparência de 50%
 def set_background(png_file):
     with open(png_file, "rb") as image_file:
         encoded = base64.b64encode(image_file.read()).decode()
     css = f"""
     <style>
     .stApp {{
-        position: relative;
-        z-index: 0;
-    }}
-    .stApp::before {{
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url("data:image/png;base64,{encoded}");
-        background-size: contain;
+        background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)),
+                    url("data:image/png;base64,{encoded}");
+        background-size: cover;
         background-repeat: no-repeat;
+        background-attachment: fixed;
         background-position: center;
-        opacity: 0.25; /* transparência */
-        filter: blur(1px) brightness(0.85); /* leve blur e escurecimento */
-        z-index: -1;
     }}
-    label, .stTextInput label, .stTextArea label, .stDateInput label {{
-        font-weight: bold !important;
+    .main .block-container {{
+        background-color: rgba(255, 255, 255, 0.85);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }}
     </style>
     """
     st.markdown(css, unsafe_allow_html=True)
-
-#set_background("Design_sem_nome-removebg-preview.png")
 
 # Brasão no topo
 doc_logo = "BRASÃO.png"
@@ -99,11 +89,11 @@ def exportar_para_docx(dados_aluno, registros):
     doc.save(nome_arquivo)
     return nome_arquivo
 
-# Interface
+# Interface de abas
 aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
 
 with aba[0]:
-    st.subheader("**Registrar Ocorrência**")
+    st.subheader("Registrar Ocorrência")
     with st.form("registro_form"):
         cgm = st.text_input("CGM")
         nome_aluno = st.text_input("Nome do aluno")
@@ -119,7 +109,7 @@ with aba[0]:
             st.success("Ocorrência registrada com sucesso!")
 
 with aba[1]:
-    st.subheader("**Consultar por CGM**")
+    st.subheader("Consultar por CGM")
     cgm_consulta = st.text_input("Digite o CGM do aluno para consultar")
     if cgm_consulta:
         resultados = buscar_ocorrencias(cgm_consulta)
@@ -129,7 +119,7 @@ with aba[1]:
             st.warning("Nenhuma ocorrência encontrada.")
 
 with aba[2]:
-    st.subheader("**Gerenciar Ocorrências**")
+    st.subheader("Gerenciar Ocorrências")
     cgm_gestao = st.text_input("CGM para editar/excluir")
     if cgm_gestao:
         resultados = buscar_ocorrencias(cgm_gestao)
@@ -145,7 +135,7 @@ with aba[2]:
                         st.warning("Excluído!")
 
 with aba[3]:
-    st.subheader("**Exportar para .docx por período**")
+    st.subheader("Exportar para .docx por período")
     cgm_export = st.text_input("CGM para exportar")
     col1, col2 = st.columns(2)
     with col1:
