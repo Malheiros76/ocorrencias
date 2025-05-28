@@ -43,7 +43,7 @@ def set_background(png_file):
 set_background("Design_sem_nome-removebg-preview.png")
 
 # LOGO E TÍTULO
-doc.add_picture("BRASÃO.png", width=doc.sections[0].page_width * 0.2)
+doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width * 0.2)
 
 doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
 doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
