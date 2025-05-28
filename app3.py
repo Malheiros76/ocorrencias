@@ -55,13 +55,10 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
     turma TEXT,
     ano TEXT,
     data TEXT,
-    fatos TEXT
+    fatos TEXT,
+    agente_aplicador TEXT
 )
 ''')
-try:
-    c.execute("ALTER TABLE ocorrencias ADD COLUMN agente_aplicador TEXT")
-except sqlite3.OperationalError:
-    pass
 conn.commit()
 
 # FUNÇÕES AUXILIARES
@@ -85,14 +82,11 @@ def atualizar_ocorrencia(id, coluna, valor):
 
 def exportar_para_docx(dados_aluno, registros):
     doc = Document()
-    doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width * 0.2)
-
     doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
     doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
-
     doc.add_paragraph(f"Aluno: {dados_aluno['nome_aluno']}")
     doc.add_paragraph(f"CGM: {dados_aluno['cgm']} | Turma: {dados_aluno['turma']} | Ano: {dados_aluno['ano']}")
-    doc.add_paragraph("")  # espaço
+    doc.add_paragraph("")
     doc.add_paragraph("FATOS REGISTRADOS:")
 
     for _, row in registros.iterrows():
