@@ -45,10 +45,11 @@ st.image("BRASÃO.png", width=150)
 st.markdown("## **Registro de Ocorrências – Colégio Cívico-Militar do Paraná**")
 st.markdown("---")
 
-# Criação do banco de dados seguro
+# Banco de dados
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
+# Criação tabela ocorrencias
 c.execute('''
 CREATE TABLE IF NOT EXISTS ocorrencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,14 +60,26 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
     turma TEXT,
     ano TEXT,
     data TEXT,
-    fatos TEXT
+    fatos TEXT,
+    agente_aplicador TEXT
 )
 ''')
 
-try:
-    c.execute("ALTER TABLE ocorrencias ADD COLUMN agente_aplicador TEXT")
-except sqlite3.OperationalError:
-    pass
+# Criação tabela alunos
+c.execute('''
+CREATE TABLE IF NOT EXISTS alunos (
+    cgm TEXT PRIMARY KEY,
+    nome TEXT,
+    nascimento TEXT,
+    idade INTEGER,
+    sexo TEXT,
+    telefone TEXT,
+    rg TEXT,
+    situacao TEXT,
+    data_matricula TEXT,
+    turma TEXT
+)
+''')
 
 conn.commit()
 
@@ -105,7 +118,36 @@ def exportar_para_docx(dados_aluno, registros):
     doc.save(nome_arquivo)
     return nome_arquivo
 
-aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
+# Funções para alunos
+def inserir_ou_atualizar_aluno(dados_aluno):
+    c.execute('''
+    INSERT INTO alunos (cgm, nome, nascimento, idade, sexo, telefone, rg, situacao, data_matricula, turma)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(cgm) DO UPDATE SET
+        nome=excluded.nome,
+        nascimento=excluded.nascimento,
+        idade=excluded.idade,
+        sexo=excluded.sexo,
+        telefone=excluded.telefone,
+        rg=excluded.rg,
+        situacao=excluded.situacao,
+        data_matricula=excluded.data_matricula,
+        turma=excluded.turma
+    ''', dados_aluno)
+    conn.commit()
+
+def buscar_aluno_por_cgm(cgm):
+    c.execute("SELECT * FROM alunos WHERE cgm = ?", (cgm,))
+    return c.fetchone()
+
+# Abas
+aba = st.tabs([
+    "📋 Registrar Ocorrência", 
+    "🔍 Consultar", 
+    "🛠️ Gerenciar", 
+    "📝 Exportar",
+    "📥 Importar Alunos"
+])
 
 with aba[0]:
     st.subheader("Registrar Ocorrência")
@@ -114,6 +156,14 @@ with aba[0]:
                   "turma", "ano", "agente_aplicador", "fatos"]:
         if campo not in st.session_state:
             st.session_state[campo] = ""
+
+    # Auto preencher ao digitar CGM
+    if st.session_state.get("cgm"):
+        aluno = buscar_aluno_por_cgm(st.session_state["cgm"])
+        if aluno:
+            st.session_state["nome_aluno"] = aluno[1]
+            st.session_state["telefone_responsavel"] = aluno[5]
+            st.session_state["turma"] = aluno[9]
 
     if st.button("🧹 Limpar"):
         for campo in ["cgm", "nome_aluno", "nome_responsavel", "telefone_responsavel",
@@ -192,7 +242,4 @@ with aba[3]:
             if not filtrado.empty:
                 if st.button("📄 Exportar para Word"):
                     nome_arquivo = exportar_para_docx(filtrado.iloc[0], filtrado)
-                    with open(nome_arquivo, "rb") as f:
-                        st.download_button("Clique para baixar o DOCX", f, file_name=nome_arquivo)
-            else:
-                st.warning("Nenhuma ocorrência no período informado.")
+                    with open(nome_arquivo
