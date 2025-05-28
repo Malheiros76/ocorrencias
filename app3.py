@@ -42,17 +42,6 @@ def set_background(png_file):
 
 set_background("Design_sem_nome-removebg-preview.png")
 
-# LOGO E TÍTULO
-doc.add_picture("BRASÃO.png", width=doc.sections[0].page_width * 0.2)
-
-doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
-doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
-
-doc.add_paragraph(f"**Aluno:** {dados_aluno['nome_aluno']}", style="Normal")
-doc.add_paragraph(f"**CGM:** {dados_aluno['cgm']} | **Turma:** {dados_aluno['turma']} | **Ano:** {dados_aluno['ano']}", style="Normal")
-doc.add_paragraph("")  # espaço
-doc.add_paragraph("**FATOS REGISTRADOS:**", style="Normal")
-
 # BANCO DE DADOS
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
