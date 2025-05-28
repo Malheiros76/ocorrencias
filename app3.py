@@ -104,7 +104,32 @@ def exportar_para_docx(dados_aluno, registros):
     nome_arquivo = f"Ocorrencias_{dados_aluno['nome_aluno'].replace(' ', '_')}.docx"
     doc.save(nome_arquivo)
     return nome_arquivo
+def importar_alunos():
+    st.header("Importar Alunos")
+    arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type=["txt"])
 
+    if arquivo is not None:
+        try:
+            # Lê o conteúdo como tabela separada por tabulação
+            df = pd.read_csv(arquivo, sep="\t", dtype=str)
+            df.columns = [col.lower().strip().replace(" ", "_") for col in df.columns]
+
+            if not {"cgm", "nome_do_estudante", "telefone"}.issubset(df.columns):
+                st.error("O arquivo precisa conter as colunas: CGM, Nome do Estudante, Telefone.")
+                return
+
+            conn = sqlite3.connect("ocorrencias.db")
+            c = conn.cursor()
+
+            for _, row in df.iterrows():
+                c.execute("INSERT OR REPLACE INTO alunos (cgm, nome_aluno, telefone) VALUES (?, ?, ?)",
+                          (str(row["cgm"]).strip(), str(row["nome_do_estudante"]).strip(), str(row["telefone"]).strip()))
+            conn.commit()
+            conn.close()
+            st.success("Alunos salvos com sucesso!")
+
+        except Exception as e:
+            st.error(f"Erro ao importar: {e}")
 aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
 
 with aba[0]:
