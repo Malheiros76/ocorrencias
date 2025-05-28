@@ -45,11 +45,10 @@ st.image("BRASÃO.png", width=150)
 st.markdown("## **Registro de Ocorrências – Colégio Cívico-Militar do Paraná**")
 st.markdown("---")
 
-# Banco de dados
+# Criação do banco de dados seguro
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
-# Tabela ocorrencias
 c.execute('''
 CREATE TABLE IF NOT EXISTS ocorrencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,23 +59,17 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
     turma TEXT,
     ano TEXT,
     data TEXT,
-    fatos TEXT,
-    agente_aplicador TEXT
+    fatos TEXT
 )
 ''')
 
-# Tabela alunos para importar
-c.execute('''
-CREATE TABLE IF NOT EXISTS alunos (
-    cgm TEXT PRIMARY KEY,
-    nome_aluno TEXT,
-    telefone TEXT
-)
-''')
+try:
+    c.execute("ALTER TABLE ocorrencias ADD COLUMN agente_aplicador TEXT")
+except sqlite3.OperationalError:
+    pass
 
 conn.commit()
 
-# Funções principais
 def inserir_ocorrencia(dados):
     c.execute('''INSERT INTO ocorrencias (
         cgm, nome_aluno, nome_responsavel, telefone_responsavel,
@@ -112,21 +105,7 @@ def exportar_para_docx(dados_aluno, registros):
     doc.save(nome_arquivo)
     return nome_arquivo
 
-def inserir_ou_atualizar_aluno(cgm, nome_aluno, telefone):
-    c.execute('''
-    INSERT INTO alunos (cgm, nome_aluno, telefone) VALUES (?, ?, ?)
-    ON CONFLICT(cgm) DO UPDATE SET nome_aluno=excluded.nome_aluno, telefone=excluded.telefone
-    ''', (cgm, nome_aluno, telefone))
-    conn.commit()
-
-# Criação das abas incluindo a nova aba "Importar Alunos"
-aba = st.tabs([
-    "📋 Registrar Ocorrência",
-    "🔍 Consultar",
-    "🛠️ Gerenciar",
-    "📝 Exportar",
-    "📥 Importar Alunos"
-])
+aba = st.tabs(["📋 Registrar Ocorrência", "🔍 Consultar", "🛠️ Gerenciar", "📝 Exportar"])
 
 with aba[0]:
     st.subheader("Registrar Ocorrência")
@@ -217,22 +196,3 @@ with aba[3]:
                         st.download_button("Clique para baixar o DOCX", f, file_name=nome_arquivo)
             else:
                 st.warning("Nenhuma ocorrência no período informado.")
-
-with aba[4]:
-    st.subheader("📥 Importar Alunos")
-
-    uploaded_file = st.file_uploader("Selecione o arquivo TXT dos alunos", type=["txt"])
-    if uploaded_file is not None:
-        try:
-            content = uploaded_file.getvalue().decode("utf-8")
-            import io
-            # Usa delim_whitespace=True para lidar com separadores por espaços/tab
-            df = pd.read_csv(io.StringIO(content), delim_whitespace=True)
-            
-            st.success("Arquivo importado com sucesso!")
-            st.dataframe(df)
-
-            if st.button("Salvar alunos no banco"):
-                for _, row in df.iterrows():
-                    inserir_ou_atualizar_aluno(
-                        cgm
