@@ -196,3 +196,25 @@ with aba[3]:
                         st.download_button("Clique para baixar o DOCX", f, file_name=nome_arquivo)
             else:
                 st.warning("Nenhuma ocorrência no período informado.")
+with aba[4]:
+    st.subheader("📥 Importar Alunos")
+
+    uploaded_file = st.file_uploader("Selecione o arquivo TXT dos alunos", type=["txt"])
+    if uploaded_file is not None:
+        try:
+            content = uploaded_file.getvalue().decode("utf-8")
+            import io
+            # Usa delim_whitespace=True para lidar com separadores por espaços/tab
+            df = pd.read_csv(io.StringIO(content), delim_whitespace=True)
+            
+            st.success("Arquivo importado com sucesso!")
+            st.dataframe(df)
+
+            if st.button("Salvar alunos no banco"):
+                for _, row in df.iterrows():
+                    inserir_ou_atualizar_aluno(
+                        cgm=str(row["CGM"]).strip(),
+nome_aluno=str(row["Nome_do_Estudante"]).strip(),
+telefone=str(row["Telefone"]).strip() if "Telefone" in row else ""
+)
+st.success("Alunos salvos com sucesso!")
