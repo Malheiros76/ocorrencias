@@ -84,7 +84,7 @@ def atualizar_ocorrencia(id, coluna, valor):
 
 def exportar_para_docx(dados_aluno, registros):
     doc = Document()
-    doc.add_picture("CABECARIOAPP.png", width=Inches(6))
+    doc.add_picture("CABEÇARIOAPP.png", width=Inches(6))
     doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
     doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
     doc.add_paragraph(f"Aluno: {dados_aluno['nome_aluno']}")
@@ -198,4 +198,4 @@ with aba[3]:
                     buffer, nome_arquivo = exportar_para_docx(filtrado.iloc[0].to_dict(), filtrado)
                     st.download_button("Clique para baixar o DOCX", buffer, file_name=nome_arquivo)
             else:
-                st.warning("Nenhuma ocorrência no período informado."
+                st.warning("Nenhuma ocorrência no período informado.")
