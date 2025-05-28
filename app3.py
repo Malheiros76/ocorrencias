@@ -241,5 +241,4 @@ with aba[4]:
                         cgm=str(row["CGM"]).strip(),
 nome_aluno=str(row["Nome_do_Estudante"]).strip(),
 telefone=str(row["Telefone"]).strip() if "Telefone" in row else ""
-)
 st.success("Alunos salvos com sucesso!")
