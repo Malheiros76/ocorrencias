@@ -242,7 +242,7 @@ with aba[3]:
             if not filtrado.empty:
                 if st.button("📄 Exportar para Word"):
                     nome_arquivo = exportar_para_docx(filtrado.iloc[0], filtrado)
-                    with open(nome_arquivo
+                    with open(nome_arquivo)
 with aba[4]:
     st.subheader("Importar Alunos via arquivo .txt")
 
