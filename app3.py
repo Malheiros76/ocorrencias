@@ -243,3 +243,43 @@ with aba[3]:
                 if st.button("📄 Exportar para Word"):
                     nome_arquivo = exportar_para_docx(filtrado.iloc[0], filtrado)
                     with open(nome_arquivo
+with aba[4]:
+    st.subheader("Importar Alunos via arquivo .txt")
+
+    uploaded_file = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type=["txt"])
+    if uploaded_file is not None:
+        # Lê o arquivo txt em um DataFrame assumindo que seja tabulado por tabulação
+        try:
+            df = pd.read_csv(uploaded_file, sep="\t")
+            st.success("Arquivo carregado com sucesso!")
+            st.dataframe(df.head())
+
+            # Botão para importar os dados para a tabela alunos
+            if st.button("Importar dados para o banco"):
+                erros = 0
+                for _, row in df.iterrows():
+                    try:
+                        dados_aluno = (
+                            str(row["CGM"]).strip(),
+                            str(row["Nome do Estudante"]).strip(),
+                            str(row.get("Nascimento", "")).strip(),
+                            int(row.get("Idade", 0)),
+                            str(row.get("Sexo", "")).strip(),
+                            str(row.get("Telefone", "")).strip(),
+                            str(row.get("RG", "")).strip(),
+                            str(row.get("Situação", "")).strip(),
+                            str(row.get("Data de Matrícula", "")).strip(),
+                            str(row.get("Turma", "")).strip()
+                        )
+                        inserir_ou_atualizar_aluno(dados_aluno)
+                    except Exception as e:
+                        erros += 1
+                        st.error(f"Erro na linha {_}: {e}")
+
+                if erros == 0:
+                    st.success("Todos os alunos foram importados com sucesso!")
+                else:
+                    st.warning(f"Importação concluída com {erros} erros.")
+
+        except Exception as e:
+            st.error(f"Erro ao ler o arquivo: {e}")
