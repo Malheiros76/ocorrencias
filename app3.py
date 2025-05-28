@@ -85,7 +85,7 @@ def atualizar_ocorrencia(id, coluna, valor):
 def exportar_para_docx(dados_aluno, registros):
     doc = Document()
     doc.add_picture("CABEÇARIOAPP.png", width=Inches(6))
-    doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
+    doc.add_heading("CCM PROFESSOR LUIZ CARLOS DE PAULA E SOUZA", level=1)
     doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
     doc.add_paragraph(f"Aluno: {dados_aluno['nome_aluno']}")
     doc.add_paragraph(f"CGM: {dados_aluno['cgm']} | Turma: {dados_aluno['turma']} | Ano: {dados_aluno['ano']}")
@@ -140,7 +140,7 @@ with aba[0]:
                 st.session_state["telefone_responsavel"],
                 st.session_state["turma"],
                 st.session_state["ano"],
-                data.strftime("%Y-%m-%d"),
+                data.strftime("%d-%m-%Y"),
                 st.session_state["fatos"],
                 st.session_state["agente_aplicador"]
             ))
