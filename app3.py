@@ -43,7 +43,7 @@ def set_background(png_file):
 set_background("Design_sem_nome-removebg-preview.png")
 
 # LOGO E TÍTULO
-doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width * 0.2)
+doc.add_picture("BRASÃO.png", width=doc.sections[0].page_width * 0.2)
 
 doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
 doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
@@ -96,15 +96,20 @@ def atualizar_ocorrencia(id, coluna, valor):
 
 def exportar_para_docx(dados_aluno, registros):
     doc = Document()
-    doc.add_picture("BRASÃO.png", width=doc.sections[0].page_width * 0.2)
-    doc.add_heading("Registro de Ocorrências", level=1)
-    doc.add_paragraph(f"Nome do Aluno: {dados_aluno['nome_aluno']}")
-    doc.add_paragraph(f"CGM: {dados_aluno['cgm']}")
-    doc.add_paragraph(f"Turma: {dados_aluno['turma']} | Ano: {dados_aluno['ano']}")
-    doc.add_paragraph("Fatos:")
+    doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width * 0.2)
+
+    doc.add_heading("COLÉGIO CÍVICO-MILITAR DO PARANÁ", level=1)
+    doc.add_heading("REGISTRO DE OCORRÊNCIA DISCIPLINAR", level=2)
+
+    doc.add_paragraph(f"Aluno: {dados_aluno['nome_aluno']}")
+    doc.add_paragraph(f"CGM: {dados_aluno['cgm']} | Turma: {dados_aluno['turma']} | Ano: {dados_aluno['ano']}")
+    doc.add_paragraph("")  # espaço
+    doc.add_paragraph("FATOS REGISTRADOS:")
+
     for _, row in registros.iterrows():
         agente = row.get("agente_aplicador", "N/A") or "N/A"
         doc.add_paragraph(f"{row['data']} - {agente}: {row['fatos']}", style='Normal')
+
     nome_arquivo = f"Ocorrencias_{dados_aluno['nome_aluno'].replace(' ', '_')}.docx"
     doc.save(nome_arquivo)
     return nome_arquivo
