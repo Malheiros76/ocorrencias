@@ -194,13 +194,19 @@ with abas[4]:
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
 
-# Aba 5 - Lista de Alunos
 with abas[5]:
     st.subheader("Lista de alunos")
     alunos = pd.read_sql_query("SELECT * FROM alunos ORDER BY nome", conn)
+
+    # Botões para selecionar aluno
     for _, row in alunos.iterrows():
         if st.button(f"{row['cgm']} - {row['nome']}", key=row['cgm']):
             st.session_state.selected_cgm = row['cgm']
             st.session_state.selected_nome = row['nome']
             st.session_state.selected_telefone = row['telefone']
-            st.experimental_rerun()
+            # Não use st.experimental_rerun() aqui!
+
+    # Mostrar dados do aluno selecionado, se houver
+    if st.session_state.selected_cgm:
+        st.write(f"**Aluno selecionado:** {st.session_state.selected_cgm} - {st.session_state.selected_nome}")
+        # Aqui você pode mostrar mais informações ou carregar dados relacionados
