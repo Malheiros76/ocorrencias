@@ -87,9 +87,7 @@ def exportar_para_docx(primeira_linha, df):
     return nome_arquivo
 
 # Aba 0 - Registro
-with abas[0]:
-    st.subheader("Registrar nova ocorrência")
-    with st.form("form_ocorrencia"):
+ with st.form("form_ocorrencia"):
         cgm = st.text_input("CGM do aluno", value=st.session_state.selected_cgm)
         nome = st.text_input("Nome do aluno", value=st.session_state.selected_nome)
         telefone = st.text_input("Telefone do responsável", value=st.session_state.selected_telefone)
@@ -97,7 +95,7 @@ with abas[0]:
         ano = st.text_input("Ano")
         data_ocorrencia = st.date_input("Data da ocorrência", value=date.today())
         fatos = st.text_area("Fatos ocorridos")
-        agente_aplicador = st.text_input("Agente aplicador")
+        agente_aplicador = st.text_input("Nome do agente aplicador")
 
         if st.form_submit_button("Registrar"):
             if not agente_aplicador.strip():
@@ -108,7 +106,6 @@ with abas[0]:
                           (cgm, nome, telefone, turma, ano, data_ocorrencia.isoformat(), fatos, agente_aplicador))
                 conn.commit()
                 st.success("Ocorrência registrada com sucesso!")
-
 # Aba 1 - Consulta
 with abas[1]:
     st.subheader("Consultar ocorrências")
