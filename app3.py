@@ -187,4 +187,61 @@ with abas[2]:
                             deletar_ocorrencia(row['id'])
                             st.warning("Ocorrência excluída.")
 
-# ==
+# ========== ABA 3 - Exportar Ocorrências ==========
+with abas[3]:
+    st.subheader("Exportar para Word (.docx)")
+    cgm_exportar = st.text_input("CGM para exportar")
+    col1, col2 = st.columns(2)
+    with col1:
+        data_ini = st.date_input("Data inicial", value=date.today())
+    with col2:
+        data_fim = st.date_input("Data final", value=date.today())
+
+    if cgm_exportar:
+        df = buscar_ocorrencias(cgm_exportar.strip())
+        if not df.empty:
+            df["data"] = pd.to_datetime(df["data"])
+            df_filtrado = df[(df["data"] >= pd.to_datetime(data_ini)) & (df["data"] <= pd.to_datetime(data_fim))]
+            if not df_filtrado.empty and st.button("Exportar"):
+                arquivo = exportar_para_docx(df_filtrado.iloc[0], df_filtrado)
+                with open(arquivo, "rb") as f:
+                    st.download_button("📥 Baixar DOCX", f, file_name=arquivo)
+            else:
+                st.info("Nenhuma ocorrência dentro do intervalo selecionado.")
+        else:
+            st.info("Nenhuma ocorrência encontrada para o CGM informado.")
+
+# ========== ABA 4 - Importar Alunos ==========
+with abas[4]:
+    st.subheader("Importar alunos a partir de arquivo TXT")
+
+    arquivo = st.file_uploader("Selecione arquivo TXT", type=["txt"])
+    if arquivo is not None:
+        texto = arquivo.read().decode("utf-8")
+        linhas = texto.strip().split("\n")
+        qtd_importados = 0
+        for linha in linhas[1:]:  # Pular cabeçalho
+            campos = linha.strip().split("\t")
+            if len(campos) >= 3:
+                cgm_txt, nome_txt, telefone_txt = campos[0].strip(), campos[1].strip(), campos[2].strip()
+                try:
+                    c.execute("INSERT OR IGNORE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)",
+                              (cgm_txt, nome_txt, telefone_txt))
+                    qtd_importados += 1
+                except Exception as e:
+                    st.warning(f"Erro ao importar linha: {linha} - {e}")
+        conn.commit()
+        st.success(f"{qtd_importados} alunos importados com sucesso!")
+
+        # Atualizar lista de CGMs na sessão
+        c.execute("SELECT cgm FROM alunos")
+        st.session_state.cgms_importados = [row[0] for row in c.fetchall()]
+
+        st.experimental_rerun()
+
+# ========== ABA 5 - Lista de Alunos ==========
+with abas[5]:
+    st.subheader("Lista de alunos importados")
+    c.execute("SELECT cgm, nome, telefone FROM alunos ORDER BY nome")
+    df_alunos = pd.DataFrame(c.fetchall(), columns=["CGM", "Nome", "Telefone"])
+    st.dataframe(df_alunos, use_container_width=True)
