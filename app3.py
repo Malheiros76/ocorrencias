@@ -3,11 +3,14 @@ import sqlite3
 import pandas as pd
 from datetime import date
 import base64
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
-# Configuração da página
+# --- Configuração da página ---
 st.set_page_config(page_title="Registro de Ocorrências", layout="wide")
 
-# Função para definir papel de parede
+# --- Função para definir papel de parede ---
 def set_background(image_file):
     try:
         with open(image_file, "rb") as image:
@@ -28,19 +31,19 @@ def set_background(image_file):
     except FileNotFoundError:
         st.warning("Imagem de fundo não encontrada.")
 
-set_background("fundo.png")  # Ajuste o caminho se precisar
+set_background("fundo.png")  # Ajuste o caminho conforme necessário
 
-# Exibir brasão
+# --- Exibir brasão ---
 try:
     st.image("brasao.png", width=200)
 except FileNotFoundError:
     st.warning("Imagem do brasão não encontrada.")
 
-# Conexão com banco SQLite
+# --- Conexão com banco SQLite ---
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
-# Criar tabelas
+# --- Criar tabelas ---
 c.execute('''
 CREATE TABLE IF NOT EXISTS alunos (
     cgm TEXT PRIMARY KEY,
@@ -63,7 +66,7 @@ CREATE TABLE IF NOT EXISTS ocorrencias (
 ''')
 conn.commit()
 
-# Estado inicial da sessão
+# --- Estado inicial da sessão ---
 if "selected_cgm" not in st.session_state:
     st.session_state.selected_cgm = ""
 if "selected_nome" not in st.session_state:
@@ -71,11 +74,10 @@ if "selected_nome" not in st.session_state:
 if "selected_telefone" not in st.session_state:
     st.session_state.selected_telefone = ""
 if "cgms_importados" not in st.session_state:
-    # Carregar CGMs do banco para a sessão
     c.execute("SELECT cgm FROM alunos")
     st.session_state.cgms_importados = [row[0] for row in c.fetchall()]
 
-# Funções auxiliares
+# --- Funções auxiliares ---
 def buscar_ocorrencias(cgm):
     return pd.read_sql_query("SELECT * FROM ocorrencias WHERE cgm = ?", conn, params=(cgm,))
 
@@ -94,18 +96,33 @@ def deletar_ocorrencia(id_):
     c.execute("DELETE FROM ocorrencias WHERE id = ?", (id_,))
     conn.commit()
 
-def exportar_para_docx(primeira_linha, df):
-    # Implementação simples placeholder
-    nome_arquivo = "ocorrencias.docx"
-    # Você pode implementar exportação real aqui
-    with open(nome_arquivo, "w", encoding="utf-8") as f:
-        f.write("Relatório de Ocorrências\n\n")
-        for idx, row in df.iterrows():
-            f.write(f"Data: {row['data'].strftime('%Y-%m-%d')}\n")
-            f.write(f"Fatos: {row['fatos']}\n\n")
+def exportar_para_docx(df):
+    document = Document()
+    document.add_heading('Relatório de Ocorrências', 0).alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    style = document.styles['Normal']
+    font = style.font
+    font.name = 'Arial'
+    font.size = Pt(11)
+
+    for idx, row in df.iterrows():
+        data_str = pd.to_datetime(row['data']).strftime("%d/%m/%Y")
+        document.add_paragraph(f"Data: {data_str}", style='Normal')
+        document.add_paragraph(f"Turma: {row.get('turma', 'N/A')}", style='Normal')
+        document.add_paragraph(f"Aluno: {row.get('nome', 'N/A')} (CGM: {row.get('cgm', 'N/A')})", style='Normal')
+        document.add_paragraph(f"Telefone: {row.get('telefone', 'N/A')}", style='Normal')
+        document.add_paragraph(f"Agente aplicador: {row.get('agente_aplicador', 'N/A')}", style='Normal')
+
+        p = document.add_paragraph("Fatos: ", style='Normal')
+        p.add_run(row['fatos']).italic = True
+
+        document.add_paragraph("-" * 50)
+
+    nome_arquivo = "ocorrencias_exportadas.docx"
+    document.save(nome_arquivo)
     return nome_arquivo
 
-# Interface: abas
+# --- Interface: abas ---
 abas = st.tabs([
     "📋 Registrar Ocorrência",
     "🔍 Consultar Ocorrências",
@@ -119,7 +136,6 @@ abas = st.tabs([
 with abas[0]:
     st.subheader("Registrar nova ocorrência")
 
-    # Carregar CGMs para selectbox
     cgms_disponiveis = st.session_state.get("cgms_importados", [])
 
     cgm_manual = st.text_input("Digite CGM do aluno manualmente:", value=st.session_state.selected_cgm)
@@ -142,7 +158,6 @@ with abas[0]:
         agente_aplicador = st.text_input("Agente aplicador")
 
         if st.form_submit_button("Registrar"):
-            # Validações básicas
             if not cgm or not nome or not telefone or not agente_aplicador:
                 st.error("Por favor, preencha todos os campos obrigatórios (CGM, Nome, Telefone, Agente aplicador).")
             else:
@@ -191,57 +206,4 @@ with abas[2]:
 with abas[3]:
     st.subheader("Exportar para Word (.docx)")
     cgm_exportar = st.text_input("CGM para exportar")
-    col1, col2 = st.columns(2)
-    with col1:
-        data_ini = st.date_input("Data inicial", value=date.today())
-    with col2:
-        data_fim = st.date_input("Data final", value=date.today())
-
-    if cgm_exportar:
-        df = buscar_ocorrencias(cgm_exportar.strip())
-        if not df.empty:
-            df["data"] = pd.to_datetime(df["data"])
-            df_filtrado = df[(df["data"] >= pd.to_datetime(data_ini)) & (df["data"] <= pd.to_datetime(data_fim))]
-            if not df_filtrado.empty and st.button("Exportar"):
-                arquivo = exportar_para_docx(df_filtrado.iloc[0], df_filtrado)
-                with open(arquivo, "rb") as f:
-                    st.download_button("📥 Baixar DOCX", f, file_name=arquivo)
-            else:
-                st.info("Nenhuma ocorrência dentro do intervalo selecionado.")
-        else:
-            st.info("Nenhuma ocorrência encontrada para o CGM informado.")
-
-# ========== ABA 4 - Importar Alunos ==========
-with abas[4]:
-    st.subheader("Importar alunos a partir de arquivo TXT")
-
-    arquivo = st.file_uploader("Selecione arquivo TXT", type=["txt"])
-    if arquivo is not None:
-        texto = arquivo.read().decode("utf-8")
-        linhas = texto.strip().split("\n")
-        qtd_importados = 0
-        for linha in linhas[1:]:  # Pular cabeçalho
-            campos = linha.strip().split("\t")
-            if len(campos) >= 3:
-                cgm_txt, nome_txt, telefone_txt = campos[0].strip(), campos[1].strip(), campos[2].strip()
-                try:
-                    c.execute("INSERT OR IGNORE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)",
-                              (cgm_txt, nome_txt, telefone_txt))
-                    qtd_importados += 1
-                except Exception as e:
-                    st.warning(f"Erro ao importar linha: {linha} - {e}")
-        conn.commit()
-        st.success(f"{qtd_importados} alunos importados com sucesso!")
-
-        # Atualizar lista de CGMs na sessão
-        c.execute("SELECT cgm FROM alunos")
-        st.session_state.cgms_importados = [row[0] for row in c.fetchall()]
-
-        st.experimental_rerun()
-
-# ========== ABA 5 - Lista de Alunos ==========
-with abas[5]:
-    st.subheader("Lista de alunos importados")
-    c.execute("SELECT cgm, nome, telefone FROM alunos ORDER BY nome")
-    df_alunos = pd.DataFrame(c.fetchall(), columns=["CGM", "Nome", "Telefone"])
-    st.dataframe(df_alunos, use_container_width=True)
+    col1
