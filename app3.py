@@ -144,7 +144,85 @@ def importar_alunos(arquivo):
             st.success("Alunos importados com sucesso!")
         except Exception as e:
             st.error(f"Erro ao importar arquivo: {e}")
+import streamlit as st
+import pandas as pd
+from datetime import datetime, date
+from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
+# Simulação de dados para exemplo — substitua pelo seu banco de dados real
+def buscar_ocorrencias(cgm):
+    # Exemplo fake de ocorrências
+    dados = [
+        {"cgm": "123", "data": "2025-05-20", "fatos": "Aluno faltou à aula", "agente_aplicador": "Prof. João"},
+        {"cgm": "123", "data": "2025-05-21", "fatos": "Entrega de tarefa atrasada", "agente_aplicador": "Prof. Ana"},
+        {"cgm": "456", "data": "2025-05-22", "fatos": "Comportamento exemplar", "agente_aplicador": "Prof. Maria"},
+    ]
+    df = pd.DataFrame(dados)
+    df["data"] = pd.to_datetime(df["data"])
+    return df[df["cgm"] == cgm]
+
+def criar_docx_ocorrencias(df_ocorrencias, cgm, data_inicio, data_fim):
+    doc = Document()
+
+    section = doc.sections[0]
+    header = section.header
+    paragraph_header = header.paragraphs[0]
+    paragraph_header.text = "Sistema de Registro de Ocorrências Escolares"
+    paragraph_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_header = paragraph_header.runs[0]
+    run_header.font.size = Pt(16)
+    run_header.font.bold = True
+    run_header.font.color.rgb = RGBColor(0, 51, 102)
+
+    p_info = doc.add_paragraph()
+    p_info.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_info = p_info.add_run(
+        f"Relatório de Ocorrências do aluno CGM: {cgm}\n"
+        f"Período: {data_inicio} até {data_fim}\n"
+        f"Emitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    )
+    run_info.font.size = Pt(12)
+    run_info.font.italic = True
+
+    doc.add_paragraph()  # linha em branco
+
+    tabela = doc.add_table(rows=1, cols=3)
+    tabela.style = "Light Grid Accent 1"
+    hdr_cells = tabela.rows[0].cells
+    hdr_cells[0].text = "Data"
+    hdr_cells[1].text = "Descrição dos Fatos"
+    hdr_cells[2].text = "Agente Aplicador"
+
+    # Deixar cabeçalho negrito e centralizado
+    for cell in hdr_cells:
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = paragraph.runs[0]
+            run.font.bold = True
+
+    # Adicionar linhas com dados
+    for _, row in df_ocorrencias.iterrows():
+        linha = tabela.add_row().cells
+        linha[0].text = row["data"].strftime("%d/%m/%Y")
+        linha[1].text = row["fatos"]
+        linha[2].text = row.get("agente_aplicador", "")
+
+    # Rodapé simples
+    footer = section.footer
+    p_footer = footer.paragraphs[0]
+    p_footer.text = "Sistema de Registro - Escola CCM Luiz Carlos de Paula e Souza"
+    p_footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_footer = p_footer.runs[0]
+    run_footer.font.size = Pt(9)
+    run_footer.font.color.rgb = RGBColor(100, 100, 100)
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
 # Interface Streamlit
 
 st.title("Sistema de Registro de Ocorrências Escolares")
@@ -221,23 +299,28 @@ with abas[2]:
             st.info("Nenhuma ocorrência encontrada para este CGM.")
 
 # --- Dentro da aba Exportar Ocorrência (3) ---
-with abas[3]:
-    st.subheader("Exportar para .docx por período")
 
-    cgm_export = st.text_input("CGM para exportar", key="cgm_export")
-    data_ini = st.date_input("Data inicial", value=date.today(), key="data_ini")
-    data_fim = st.date_input("Data final", value=date.today(), key="data_fim")
 
-    st.button("Limpar", key="limpar_exportar", on_click=limpar_campos_exportar)
+st.title("Exportador de Ocorrências para .docx")
 
-    if cgm_export:
-        dados = buscar_ocorrencias(cgm_export)
-        if not dados.empty:
-            dados["data"] = pd.to_datetime(dados["data"])
+cgm_export = st.text_input("Digite o CGM do aluno para exportar")
+data_ini = st.date_input("Data inicial", value=date.today())
+data_fim = st.date_input("Data final", value=date.today())
+
+if st.button("Buscar ocorrências"):
+    if not cgm_export.strip():
+        st.warning("Digite um CGM válido")
+    else:
+        dados = buscar_ocorrencias(cgm_export.strip())
+        if dados.empty:
+            st.info("Nenhuma ocorrência encontrada para este CGM.")
+        else:
             filtrado = dados[(dados["data"] >= pd.to_datetime(data_ini)) & (dados["data"] <= pd.to_datetime(data_fim))]
-            if not filtrado.empty:
-                st.write(f"{len(filtrado)} ocorrências encontradas no período.")
-                st.dataframe(filtrado[["data", "fatos"]], use_container_width=True)
+            if filtrado.empty:
+                st.warning("Nenhuma ocorrência encontrada no período informado.")
+            else:
+                st.write(f"{len(filtrado)} ocorrências encontradas:")
+                st.dataframe(filtrado[["data", "fatos", "agente_aplicador"]], use_container_width=True)
 
                 if st.button("Gerar arquivo .docx"):
                     arquivo_docx = criar_docx_ocorrencias(filtrado, cgm_export, data_ini.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y"))
@@ -247,11 +330,7 @@ with abas[3]:
                         file_name=f"ocorrencias_{cgm_export}_{data_ini}_{data_fim}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
-            else:
-                st.warning("Nenhuma ocorrência no período informado.")
-        else:
-            st.info("Nenhuma ocorrência encontrada para este CGM.")
-
+                    
 # Aba 4 - Importar Alunos 
 with aba[4]:
     st.subheader("Importar alunos via .txt")
