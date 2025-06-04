@@ -253,7 +253,7 @@ with abas[3]:
             st.info("Nenhuma ocorrência encontrada para este CGM.")
 
 # Aba 4 - Importar Alunos 
-    with aba[4]:
+with aba[4]:
     st.subheader("Importar alunos via .txt")
 
     arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type="txt")
