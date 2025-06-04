@@ -3,10 +3,11 @@ import sqlite3
 import pandas as pd
 from datetime import date
 
-# --- Conexão e criação das tabelas ---
+# --- Conexão com o banco ---
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
+# --- Criação das tabelas ---
 c.execute('''CREATE TABLE IF NOT EXISTS alunos (
     cgm TEXT PRIMARY KEY,
     nome TEXT,
@@ -26,27 +27,24 @@ c.execute('''CREATE TABLE IF NOT EXISTS ocorrencias (
 )''')
 conn.commit()
 
-# --- Inicializa session_state para campos ---
-if "selected_cgm" not in st.session_state:
-    st.session_state.selected_cgm = ""
-if "selected_nome" not in st.session_state:
-    st.session_state.selected_nome = ""
-if "selected_telefone" not in st.session_state:
-    st.session_state.selected_telefone = ""
-if "aba_ativa" not in st.session_state:
-    st.session_state.aba_ativa = 0
+# --- Inicialização do session_state ---
+for k in [
+    "selected_cgm", "selected_nome", "selected_telefone", "aba_ativa",
+    "cgm_registro", "nome_registro", "telefone_registro", "turma_registro",
+    "ano_registro", "data_ocorrencia_registro", "fatos_registro",
+    "cgm_busca", "cgm_gestao", "cgm_export", "data_ini", "data_fim"
+]:
+    if k not in st.session_state:
+        st.session_state[k] = "" if "data" not in k else date.today()
 
-# Configuração página e layout
+# --- Configuração da página ---
 st.set_page_config(page_title="Registro de Ocorrências", layout="wide")
-
-# Mostra o brasão (imagem na mesma pasta do app)
 st.image("brasao.png", width=100)
 st.title("Sistema de Registro de Ocorrências Escolares")
 
 # --- Funções auxiliares ---
 def buscar_ocorrencias(cgm):
-    df = pd.read_sql_query("SELECT * FROM ocorrencias WHERE cgm = ?", conn, params=(cgm,))
-    return df
+    return pd.read_sql_query("SELECT * FROM ocorrencias WHERE cgm = ?", conn, params=(cgm,))
 
 def atualizar_ocorrencia(id_, campo, valor):
     c.execute(f"UPDATE ocorrencias SET {campo} = ? WHERE id = ?", (valor, id_))
@@ -57,16 +55,10 @@ def deletar_ocorrencia(id_):
     conn.commit()
 
 def limpar_campos_registro():
-    st.session_state.selected_cgm = ""
-    st.session_state.selected_nome = ""
-    st.session_state.selected_telefone = ""
-    st.session_state.cgm_registro = ""
-    st.session_state.nome_registro = ""
-    st.session_state.telefone_registro = ""
-    st.session_state.turma_registro = ""
-    st.session_state.ano_registro = ""
+    for k in ["selected_cgm", "selected_nome", "selected_telefone", "cgm_registro",
+              "nome_registro", "telefone_registro", "turma_registro", "ano_registro", "fatos_registro"]:
+        st.session_state[k] = ""
     st.session_state.data_ocorrencia_registro = date.today()
-    st.session_state.fatos_registro = ""
 
 def limpar_campos_consultar():
     st.session_state.cgm_busca = ""
@@ -79,16 +71,8 @@ def limpar_campos_exportar():
     st.session_state.data_ini = date.today()
     st.session_state.data_fim = date.today()
 
-def limpar_campos_importar():
-    # Não dá para limpar o file_uploader via session_state, então só faz nada aqui
-    pass
-
-def limpar_campos_lista_alunos():
-    # Sem campos editáveis nessa aba
-    pass
-
-# --- Cria as abas ---
-aba = st.tabs([
+# --- Abas principais ---
+abas = st.tabs([
     "📋 Registrar Ocorrência",
     "🔍 Consultar Ocorrências",
     "✏️ Editar Ocorrência",
@@ -97,14 +81,12 @@ aba = st.tabs([
     "📚 Lista de Alunos"
 ])
 
-# --- Aba 0 - Registrar Ocorrência ---
-with aba[0]:
+# --- Aba 0: Registro ---
+with abas[0]:
     st.subheader("Registrar nova ocorrência")
-
     cgm = st.text_input("CGM do aluno", value=st.session_state.selected_cgm, key="cgm_registro")
 
-    nome = ""
-    telefone = ""
+    nome, telefone = "", ""
     if cgm:
         aluno = c.execute("SELECT nome, telefone FROM alunos WHERE cgm = ?", (cgm,)).fetchone()
         if aluno:
@@ -128,8 +110,10 @@ with aba[0]:
             if not cgm or not nome_aluno:
                 st.error("Preencha pelo menos CGM e nome do aluno.")
             else:
-                c.execute("INSERT INTO ocorrencias (cgm, nome, telefone, turma, ano, data, fatos) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                          (cgm, nome_aluno, telefone_responsavel, turma, ano, data_ocorrencia.isoformat(), fatos))
+                c.execute("""
+                    INSERT INTO ocorrencias (cgm, nome, telefone, turma, ano, data, fatos)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (cgm, nome_aluno, telefone_responsavel, turma, ano, data_ocorrencia.isoformat(), fatos))
                 conn.commit()
                 st.success("Ocorrência registrada com sucesso!")
                 limpar_campos_registro()
@@ -138,11 +122,8 @@ with aba[0]:
         if st.button("Limpar"):
             limpar_campos_registro()
 
-# --- Aba 1 - Consultar Ocorrências ---
-def limpar_campos_consultar():
-    st.session_state.cgm_busca = ""
-
-with aba[1]:
+# --- Aba 1: Consulta ---
+with abas[1]:
     st.subheader("Consultar ocorrências")
     cgm_busca = st.text_input("Digite o CGM para buscar ocorrências", key="cgm_busca")
     st.button("Limpar", key="limpar_consultar", on_click=limpar_campos_consultar)
@@ -155,8 +136,8 @@ with aba[1]:
         else:
             st.info("Nenhuma ocorrência encontrada para este CGM.")
 
-# --- Aba 2 - Editar Ocorrência ---
-with aba[2]:
+# --- Aba 2: Edição/Exclusão ---
+with abas[2]:
     st.subheader("Gerenciar Ocorrências")
     cgm_gestao = st.text_input("CGM para editar/excluir", key="cgm_gestao")
     if st.button("Limpar", key="limpar_editar"):
@@ -165,7 +146,7 @@ with aba[2]:
     if cgm_gestao:
         resultados = buscar_ocorrencias(cgm_gestao)
         if not resultados.empty:
-            for i, row in resultados.iterrows():
+            for _, row in resultados.iterrows():
                 with st.expander(f"{row['data']} - {row['fatos'][:30]}..."):
                     novo_fato = st.text_area("Editar fatos", row['fatos'], key=f"edit_{row['id']}")
                     novo_aplicador = st.text_input("Editar Agente Aplicador", row.get('agente_aplicador', ""), key=f"aplicador_{row['id']}")
@@ -177,9 +158,9 @@ with aba[2]:
                         deletar_ocorrencia(row['id'])
                         st.warning("Excluído!")
 
-# --- Aba 3 - Exportar Ocorrência ---
-with aba[3]:
-    st.subheader("Exportar para .docx por período")
+# --- Aba 3: Exportação ---
+with abas[3]:
+    st.subheader("Exportar ocorrências por período")
 
     cgm_export = st.text_input("CGM para exportar", key="cgm_export")
     data_ini = st.date_input("Data inicial", value=date.today(), key="data_ini")
@@ -195,30 +176,28 @@ with aba[3]:
             filtrado = dados[(dados["data"] >= pd.to_datetime(data_ini)) & (dados["data"] <= pd.to_datetime(data_fim))]
             if not filtrado.empty:
                 st.write(f"{len(filtrado)} ocorrências encontradas no período.")
-                # Aqui pode implementar exportação, por enquanto só mostra tabela
                 st.dataframe(filtrado, use_container_width=True)
+                # Aqui você pode implementar exportação para PDF/Word
             else:
                 st.warning("Nenhuma ocorrência no período informado.")
 
-# --- Aba 4 - Importar Alunos ---
-with aba[4]:
+# --- Aba 4: Importação ---
+with abas[4]:
     st.subheader("Importar alunos via .txt")
-
     arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type="txt")
+
     if st.button("Limpar", key="limpar_importar"):
-        # Não é possível limpar file_uploader via código, então só mostra mensagem
         st.info("Para limpar o arquivo, remova manualmente no uploader.")
 
     if arquivo is not None:
         try:
             linhas = arquivo.read().decode("utf-8").splitlines()
-            for linha in linhas[1:]:  # Pulando cabeçalho
+            for linha in linhas[1:]:  # Pula cabeçalho
                 campos = linha.split("\t")
                 if len(campos) >= 3:
                     cgm_arquivo = campos[0].strip()
                     nome_arquivo = campos[1].strip()
                     telefone_arquivo = campos[2].strip()
-                    # Insere ou ignora se já existir
                     c.execute("INSERT OR IGNORE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", 
                               (cgm_arquivo, nome_arquivo, telefone_arquivo))
             conn.commit()
@@ -226,9 +205,8 @@ with aba[4]:
         except Exception as e:
             st.error(f"Erro ao importar arquivo: {e}")
 
-# --- Aba 5 - Lista de Alunos ---
-with aba[5]:
+# --- Aba 5: Lista de alunos ---
+with abas[5]:
     st.subheader("Lista de alunos cadastrados")
     alunos_df = pd.read_sql_query("SELECT * FROM alunos", conn)
     st.dataframe(alunos_df, use_container_width=True)
-
