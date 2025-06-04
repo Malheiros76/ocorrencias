@@ -2,208 +2,190 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import date
-import base64
-from docx import Document
-from docx.shared import Pt
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 
-# --- Configuração da página ---
-st.set_page_config(page_title="Registro de Ocorrências", layout="wide")
+# Configurações iniciais
+st.set_page_config(page_title="Sistema de Registro de Ocorrências", layout="wide")
 
-# --- Função para definir papel de parede ---
-def set_background(image_file):
-    try:
-        with open(image_file, "rb") as image:
-            encoded = base64.b64encode(image.read()).decode()
-        st.markdown(
-            f"""
-            <style>
-            .stApp {{
-                background-image: url("data:image/png;base64,{encoded}");
-                background-size: cover;
-                background-repeat: no-repeat;
-                background-attachment: fixed;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-    except FileNotFoundError:
-        st.warning("Imagem de fundo não encontrada.")
-
-set_background("fundo.png")  # Ajuste o caminho conforme necessário
-
-# --- Exibir brasão ---
-try:
-    st.image("brasao.png", width=200)
-except FileNotFoundError:
-    st.warning("Imagem do brasão não encontrada.")
-
-# --- Conexão com banco SQLite ---
 conn = sqlite3.connect("ocorrencias.db", check_same_thread=False)
 c = conn.cursor()
 
-# --- Criar tabelas ---
-c.execute('''
-CREATE TABLE IF NOT EXISTS alunos (
-    cgm TEXT PRIMARY KEY,
-    nome TEXT,
-    telefone TEXT
-)
-''')
-c.execute('''
+# Criação das tabelas se não existirem
+c.execute("""
 CREATE TABLE IF NOT EXISTS ocorrencias (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cgm TEXT,
-    nome TEXT,
-    telefone TEXT,
-    turma TEXT,
-    ano TEXT,
-    data TEXT,
-    fatos TEXT,
+    cgm TEXT NOT NULL,
+    data TEXT NOT NULL,
+    fatos TEXT NOT NULL,
     agente_aplicador TEXT
 )
-''')
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS alunos (
+    cgm TEXT PRIMARY KEY,
+    nome TEXT NOT NULL,
+    telefone TEXT
+)
+""")
+
 conn.commit()
 
-# --- Estado inicial da sessão ---
-if "selected_cgm" not in st.session_state:
-    st.session_state.selected_cgm = ""
-if "selected_nome" not in st.session_state:
-    st.session_state.selected_nome = ""
-if "selected_telefone" not in st.session_state:
-    st.session_state.selected_telefone = ""
-if "cgms_importados" not in st.session_state:
-    c.execute("SELECT cgm FROM alunos")
-    st.session_state.cgms_importados = [row[0] for row in c.fetchall()]
+# Funções auxiliares
 
-# --- Funções auxiliares ---
-def buscar_ocorrencias(cgm):
-    return pd.read_sql_query("SELECT * FROM ocorrencias WHERE cgm = ?", conn, params=(cgm,))
+def buscar_ocorrencias(cgm: str) -> pd.DataFrame:
+    df = pd.read_sql_query(
+        "SELECT id, cgm, data, fatos, agente_aplicador FROM ocorrencias WHERE cgm = ? ORDER BY data DESC", 
+        conn, params=(cgm,)
+    )
+    return df
 
-def buscar_aluno_por_cgm(cgm):
-    c.execute("SELECT nome, telefone FROM alunos WHERE cgm = ?", (cgm,))
-    res = c.fetchone()
-    if res:
-        return {"nome": res[0], "telefone": res[1]}
-    return None
-
-def atualizar_ocorrencia(id_, campo, valor):
-    c.execute(f"UPDATE ocorrencias SET {campo} = ? WHERE id = ?", (valor, id_))
+def atualizar_ocorrencia(id: int, campo: str, valor: str):
+    c.execute(f"UPDATE ocorrencias SET {campo} = ? WHERE id = ?", (valor, id))
     conn.commit()
 
-def deletar_ocorrencia(id_):
-    c.execute("DELETE FROM ocorrencias WHERE id = ?", (id_,))
+def deletar_ocorrencia(id: int):
+    c.execute("DELETE FROM ocorrencias WHERE id = ?", (id,))
     conn.commit()
 
-def exportar_para_docx(df):
-    document = Document()
-    document.add_heading('Relatório de Ocorrências', 0).alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+def limpar_campos_consultar():
+    st.session_state.cgm_busca = ""
 
-    style = document.styles['Normal']
-    font = style.font
-    font.name = 'Arial'
-    font.size = Pt(11)
+def limpar_campos_editar():
+    st.session_state.cgm_gestao = ""
 
-    for idx, row in df.iterrows():
-        data_str = pd.to_datetime(row['data']).strftime("%d/%m/%Y")
-        document.add_paragraph(f"Data: {data_str}", style='Normal')
-        document.add_paragraph(f"Turma: {row.get('turma', 'N/A')}", style='Normal')
-        document.add_paragraph(f"Aluno: {row.get('nome', 'N/A')} (CGM: {row.get('cgm', 'N/A')})", style='Normal')
-        document.add_paragraph(f"Telefone: {row.get('telefone', 'N/A')}", style='Normal')
-        document.add_paragraph(f"Agente aplicador: {row.get('agente_aplicador', 'N/A')}", style='Normal')
+def limpar_campos_exportar():
+    st.session_state.cgm_export = ""
+    st.session_state.data_ini = date.today()
+    st.session_state.data_fim = date.today()
 
-        p = document.add_paragraph("Fatos: ", style='Normal')
-        p.add_run(row['fatos']).italic = True
+def importar_alunos(arquivo):
+    if arquivo is not None:
+        try:
+            linhas = arquivo.read().decode("utf-8").splitlines()
+            for linha in linhas[1:]:
+                campos = linha.split("\t")
+                if len(campos) >= 3:
+                    cgm_arquivo = campos[0].strip()
+                    nome_arquivo = campos[1].strip()
+                    telefone_arquivo = campos[2].strip()
+                    c.execute("INSERT OR IGNORE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", 
+                              (cgm_arquivo, nome_arquivo, telefone_arquivo))
+            conn.commit()
+            st.success("Alunos importados com sucesso!")
+        except Exception as e:
+            st.error(f"Erro ao importar arquivo: {e}")
 
-        document.add_paragraph("-" * 50)
+# Interface Streamlit
 
-    nome_arquivo = "ocorrencias_exportadas.docx"
-    document.save(nome_arquivo)
-    return nome_arquivo
+st.title("Sistema de Registro de Ocorrências Escolares")
 
-# --- Interface: abas ---
-abas = st.tabs([
-    "📋 Registrar Ocorrência",
-    "🔍 Consultar Ocorrências",
-    "✏️ Editar Ocorrência",
-    "📄 Exportar Ocorrência",
-    "📥 Importar Alunos",
-    "📚 Lista de Alunos"
-])
+abas = st.tabs(["Registrar Ocorrência", "Consultar Ocorrências", "Editar Ocorrência", "Exportar Ocorrência", "Importar Alunos", "Lista de Alunos"])
 
-# ========== ABA 0 - Registrar Ocorrência ==========
+# Aba 0 - Registrar Ocorrência (básica para completar)
 with abas[0]:
     st.subheader("Registrar nova ocorrência")
+    cgm = st.text_input("CGM do aluno", key="cgm_registrar")
+    data = st.date_input("Data da ocorrência", value=date.today(), key="data_registrar")
+    fatos = st.text_area("Descrição dos fatos", key="fatos_registrar")
+    aplicador = st.text_input("Agente Aplicador", key="aplicador_registrar")
+    
+    if st.button("Registrar ocorrência"):
+        if cgm and fatos:
+            c.execute("INSERT INTO ocorrencias (cgm, data, fatos, agente_aplicador) VALUES (?, ?, ?, ?)", 
+                      (cgm, data.strftime("%Y-%m-%d"), fatos, aplicador))
+            conn.commit()
+            st.success("Ocorrência registrada com sucesso!")
+            # Limpar campos
+            st.session_state.cgm_registrar = ""
+            st.session_state.fatos_registrar = ""
+            st.session_state.aplicador_registrar = ""
+        else:
+            st.warning("Preencha o CGM e os fatos da ocorrência.")
 
-    cgms_disponiveis = st.session_state.get("cgms_importados", [])
-
-    cgm_manual = st.text_input("Digite CGM do aluno manualmente:", value=st.session_state.selected_cgm)
-    cgm_select = st.selectbox("Ou selecione CGM importado:", options=[""] + cgms_disponiveis, index=0)
-    cgm_final = cgm_manual.strip() if cgm_manual.strip() else cgm_select
-
-    aluno_info = buscar_aluno_por_cgm(cgm_final) if cgm_final else None
-
-    nome_val = aluno_info["nome"] if aluno_info else st.session_state.selected_nome
-    telefone_val = aluno_info["telefone"] if aluno_info else st.session_state.selected_telefone
-
-    with st.form("form_ocorrencia"):
-        cgm = st.text_input("CGM do aluno", value=cgm_final, key="form_cgm")
-        nome = st.text_input("Nome do aluno", value=nome_val, key="form_nome")
-        telefone = st.text_input("Telefone do responsável", value=telefone_val, key="form_telefone")
-        turma = st.text_input("Turma")
-        ano = st.text_input("Ano")
-        data_ocorrencia = st.date_input("Data da ocorrência", value=date.today())
-        fatos = st.text_area("Fatos ocorridos")
-        agente_aplicador = st.text_input("Agente aplicador")
-
-        if st.form_submit_button("Registrar"):
-            if not cgm or not nome or not telefone or not agente_aplicador:
-                st.error("Por favor, preencha todos os campos obrigatórios (CGM, Nome, Telefone, Agente aplicador).")
-            else:
-                c.execute('''
-                    INSERT INTO ocorrencias (cgm, nome, telefone, turma, ano, data, fatos, agente_aplicador)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (cgm, nome, telefone, turma, ano, data_ocorrencia.isoformat(), fatos, agente_aplicador))
-                conn.commit()
-                st.success("Ocorrência registrada com sucesso!")
-
-# ========== ABA 1 - Consultar Ocorrências ==========
+# Aba 1 - Consultar Ocorrências
 with abas[1]:
     st.subheader("Consultar ocorrências")
-    cgm_consulta = st.text_input("CGM do aluno para consulta")
-    if cgm_consulta:
-        dados = buscar_ocorrencias(cgm_consulta.strip())
-        if not dados.empty:
-            df = dados[["data", "fatos"]].sort_values(by="data", ascending=False)
+    cgm_busca = st.text_input("Digite o CGM para buscar ocorrências", key="cgm_busca")
+    st.button("Limpar", key="limpar_consultar", on_click=limpar_campos_consultar)
+    
+    if cgm_busca:
+        ocorrencias = buscar_ocorrencias(cgm_busca)
+        if not ocorrencias.empty:
+            df = ocorrencias[["data", "fatos"]].copy()
+            df.columns = ["Data", "Fatos"]
             st.dataframe(df, use_container_width=True)
         else:
-            st.info("Nenhuma ocorrência encontrada.")
+            st.info("Nenhuma ocorrência encontrada para este CGM.")
 
-# ========== ABA 2 - Editar/Excluir Ocorrências ==========
+# Aba 2 - Editar Ocorrência
 with abas[2]:
-    st.subheader("Editar/Excluir Ocorrências")
-    cgm_edicao = st.text_input("CGM para editar")
-    if cgm_edicao:
-        ocorrencias = buscar_ocorrencias(cgm_edicao.strip())
-        if not ocorrencias.empty:
-            for _, row in ocorrencias.iterrows():
+    st.subheader("Gerenciar Ocorrências")
+    cgm_gestao = st.text_input("CGM para editar/excluir", key="cgm_gestao")
+    st.button("Limpar", key="limpar_editar", on_click=limpar_campos_editar)
+
+    if cgm_gestao:
+        resultados = buscar_ocorrencias(cgm_gestao)
+        if not resultados.empty:
+            for _, row in resultados.iterrows():
                 with st.expander(f"{row['data']} - {row['fatos'][:30]}..."):
-                    novo_fato = st.text_area("Fatos", row["fatos"], key=f"fato_{row['id']}")
-                    novo_aplicador = st.text_input("Agente aplicador", row.get("agente_aplicador", ""), key=f"agente_{row['id']}")
+                    edit_key = f"edit_{row['id']}"
+                    aplicador_key = f"aplicador_{row['id']}"
+                    novo_fato = st.text_area("Editar fatos", row['fatos'], key=edit_key)
+                    novo_aplicador = st.text_input("Editar Agente Aplicador", row.get('agente_aplicador', ""), key=aplicador_key)
+                    
+                    def salvar_edicao(id_row=row['id'], fato=novo_fato, aplicador=novo_aplicador):
+                        atualizar_ocorrencia(id_row, 'fatos', fato)
+                        atualizar_ocorrencia(id_row, 'agente_aplicador', aplicador)
+                        st.experimental_rerun()
+                        
+                    def excluir_ocorrencia_cb(id_row=row['id']):
+                        deletar_ocorrencia(id_row)
+                        st.experimental_rerun()
+                    
                     col1, col2 = st.columns(2)
                     with col1:
-                        if st.button("Salvar", key=f"salvar_{row['id']}"):
-                            atualizar_ocorrencia(row['id'], "fatos", novo_fato)
-                            atualizar_ocorrencia(row['id'], "agente_aplicador", novo_aplicador)
-                            st.success("Atualizado com sucesso!")
+                        st.button("Salvar edição", key=f"save_{row['id']}", on_click=salvar_edicao)
                     with col2:
-                        if st.button("Excluir", key=f"excluir_{row['id']}"):
-                            deletar_ocorrencia(row['id'])
-                            st.warning("Ocorrência excluída.")
+                        st.button("🔚 Excluir", key=f"delete_{row['id']}", on_click=excluir_ocorrencia_cb)
+        else:
+            st.info("Nenhuma ocorrência encontrada para este CGM.")
 
-# ========== ABA 3 - Exportar Ocorrências ==========
+# Aba 3 - Exportar Ocorrência
 with abas[3]:
-    st.subheader("Exportar para Word (.docx)")
-    cgm_exportar = st.text_input("CGM para exportar")
-    col1
+    st.subheader("Exportar para .docx por período")
+
+    cgm_export = st.text_input("CGM para exportar", key="cgm_export")
+    data_ini = st.date_input("Data inicial", value=date.today(), key="data_ini")
+    data_fim = st.date_input("Data final", value=date.today(), key="data_fim")
+
+    st.button("Limpar", key="limpar_exportar", on_click=limpar_campos_exportar)
+
+    if cgm_export:
+        dados = buscar_ocorrencias(cgm_export)
+        if not dados.empty:
+            dados["data"] = pd.to_datetime(dados["data"])
+            filtrado = dados[(dados["data"] >= pd.to_datetime(data_ini)) & (dados["data"] <= pd.to_datetime(data_fim))]
+            if not filtrado.empty:
+                st.write(f"{len(filtrado)} ocorrências encontradas no período.")
+                st.dataframe(filtrado[["data", "fatos"]], use_container_width=True)
+                # Aqui você pode implementar exportação para .docx, PDF etc.
+            else:
+                st.warning("Nenhuma ocorrência no período informado.")
+
+# Aba 4 - Importar Alunos
+with abas[4]:
+    st.subheader("Importar alunos via .txt")
+
+    arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type="txt")
+    
+    if st.button("Importar"):
+        importar_alunos(arquivo)
+
+    if st.button("Limpar", key="limpar_importar"):
+        st.info("Para limpar o arquivo, remova manualmente no uploader.")
+
+# Aba 5 - Lista de Alunos
+with abas[5]:
+    st.subheader("Lista de alunos cadastrados")
+    alunos_df = pd.read_sql_query("SELECT * FROM alunos", conn)
+    st.dataframe(alunos_df, use_container_width=True)
