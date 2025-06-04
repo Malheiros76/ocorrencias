@@ -32,6 +32,76 @@ conn.commit()
 
 # Funções auxiliares
 
+   from io import BytesIO
+from docx import Document
+from docx.shared import Pt, RGBColor, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from datetime import datetime
+
+def criar_docx_ocorrencias(df_ocorrencias, cgm, data_inicio, data_fim):
+    doc = Document()
+
+    # Cabeçalho com título e data
+    section = doc.sections[0]
+    header = section.header
+    paragraph_header = header.paragraphs[0]
+    paragraph_header.text = "Sistema de Registro de Ocorrências Escolares"
+    paragraph_header.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_header = paragraph_header.runs[0]
+    run_header.font.size = Pt(16)
+    run_header.font.bold = True
+    run_header.font.color.rgb = RGBColor(0, 51, 102)
+
+    # Adicionar parágrafo com info do relatório
+    p_info = doc.add_paragraph()
+    p_info.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_info = p_info.add_run(f"Relatório de Ocorrências do aluno CGM: {cgm}\nPeríodo: {data_inicio} até {data_fim}\nEmitido em: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    run_info.font.size = Pt(12)
+    run_info.font.italic = True
+
+    doc.add_paragraph()  # linha em branco
+
+    # Criar tabela de ocorrências
+    tabela = doc.add_table(rows=1, cols=3)
+    tabela.style = 'Light Grid Accent 1'
+    hdr_cells = tabela.rows[0].cells
+    hdr_cells[0].text = 'Data'
+    hdr_cells[1].text = 'Descrição dos Fatos'
+    hdr_cells[2].text = 'Agente Aplicador'
+
+    # Estilizar cabeçalho da tabela
+    for cell in hdr_cells:
+        for paragraph in cell.paragraphs:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = paragraph.runs[0]
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(255, 255, 255)
+        cell.fill.solid()
+        shading_elm_1 = cell._element.xpath('.//w:tcPr/w:shd')[0]
+        shading_elm_1.set("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}fill", "2F75B5")
+
+    # Adicionar linhas da tabela
+    for _, row in df_ocorrencias.iterrows():
+        linha = tabela.add_row().cells
+        linha[0].text = row["data"].strftime("%d/%m/%Y")
+        linha[1].text = row["fatos"]
+        linha[2].text = row.get("agente_aplicador", "") or ""
+
+    # Rodapé com informações opcionais
+    footer = section.footer
+    p_footer = footer.paragraphs[0]
+    p_footer.text = "Sistema de Registro - Escola CCM Luiz Carlos de Paula e Souza"
+    p_footer.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_footer = p_footer.runs[0]
+    run_footer.font.size = Pt(9)
+    run_footer.font.color.rgb = RGBColor(100, 100, 100)
+
+    # Salvar em buffer para download no Streamlit
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
 def buscar_ocorrencias(cgm: str) -> pd.DataFrame:
     df = pd.read_sql_query(
         "SELECT id, cgm, data, fatos, agente_aplicador FROM ocorrencias WHERE cgm = ? ORDER BY data DESC", 
@@ -150,7 +220,7 @@ with abas[2]:
         else:
             st.info("Nenhuma ocorrência encontrada para este CGM.")
 
-# Aba 3 - Exportar Ocorrência
+# --- Dentro da aba Exportar Ocorrência (3) ---
 with abas[3]:
     st.subheader("Exportar para .docx por período")
 
@@ -168,21 +238,19 @@ with abas[3]:
             if not filtrado.empty:
                 st.write(f"{len(filtrado)} ocorrências encontradas no período.")
                 st.dataframe(filtrado[["data", "fatos"]], use_container_width=True)
-                # Aqui você pode implementar exportação para .docx, PDF etc.
+
+                if st.button("Gerar arquivo .docx"):
+                    arquivo_docx = criar_docx_ocorrencias(filtrado, cgm_export, data_ini.strftime("%d/%m/%Y"), data_fim.strftime("%d/%m/%Y"))
+                    st.download_button(
+                        label="Baixar arquivo .docx",
+                        data=arquivo_docx,
+                        file_name=f"ocorrencias_{cgm_export}_{data_ini}_{data_fim}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
             else:
                 st.warning("Nenhuma ocorrência no período informado.")
-
-# Aba 4 - Importar Alunos
-with abas[4]:
-    st.subheader("Importar alunos via .txt")
-
-    arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type="txt")
-    
-    if st.button("Importar"):
-        importar_alunos(arquivo)
-
-    if st.button("Limpar", key="limpar_importar"):
-        st.info("Para limpar o arquivo, remova manualmente no uploader.")
+        else:
+            st.info("Nenhuma ocorrência encontrada para este CGM.")
 
 # Aba 5 - Lista de Alunos
 with abas[5]:
