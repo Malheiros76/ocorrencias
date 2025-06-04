@@ -252,6 +252,32 @@ with abas[3]:
         else:
             st.info("Nenhuma ocorrência encontrada para este CGM.")
 
+ --- Aba 4 - Importar Alunos ---
+with aba[4]:
+    st.subheader("Importar alunos via .txt")
+
+    arquivo = st.file_uploader("Escolha o arquivo .txt com os dados dos alunos", type="txt")
+    if st.button("Limpar", key="limpar_importar"):
+        # Não é possível limpar file_uploader via código, então só mostra mensagem
+        st.info("Para limpar o arquivo, remova manualmente no uploader.")
+
+    if arquivo is not None:
+        try:
+            linhas = arquivo.read().decode("utf-8").splitlines()
+            for linha in linhas[1:]:  # Pulando cabeçalho
+                campos = linha.split("\t")
+                if len(campos) >= 3:
+                    cgm_arquivo = campos[0].strip()
+                    nome_arquivo = campos[1].strip()
+                    telefone_arquivo = campos[2].strip()
+                    # Insere ou ignora se já existir
+                    c.execute("INSERT OR IGNORE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", 
+                              (cgm_arquivo, nome_arquivo, telefone_arquivo))
+            conn.commit()
+            st.success("Alunos importados com sucesso!")
+        except Exception as e:
+            st.error(f"Erro ao importar arquivo: {e}")
+
 # Aba 5 - Lista de Alunos
 with abas[5]:
     st.subheader("Lista de alunos cadastrados")
