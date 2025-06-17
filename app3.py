@@ -126,24 +126,37 @@ def exportar_ocorrencias_para_word(resultados):
     doc.save(doc_path)
     return doc_path
 
+from fpdf import FPDF
+
 def exportar_ocorrencias_para_pdf(resultados):
     pdf = FPDF()
     pdf.add_page()
-    pdf.image("CABEÇARIOAPP.png", x=10, y=8, w=pdf.w - 20)
-    pdf.ln(35)
-    pdf.set_font("Arial", 'B', 16)
+    pdf.set_font("Arial", "B", 16)
+    
+    # Cabeçalho com imagem
+    pdf.image("CABEÇARIOAPP.png", x=10, y=8, w=190)
+    pdf.ln(35)  # Espaço após a imagem
+    
     pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
-    pdf.set_font("Arial", '', 12)
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", size=12)
+
     for cgm, nome, data, desc in resultados:
-        page_width = pdf.w - 2 * pdf.l_margin
-        pdf.multi_cell(page_width, 10, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
+        pdf.multi_cell(0, 8, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}")
+        pdf.ln(2)
+        pdf.cell(0, 0, "-" * 70, ln=True)  # Linha de separação
+        pdf.ln(5)
+
+    # Espaço para assinaturas
     pdf.ln(10)
-    pdf.cell(0, 10, "Assinatura do Servidor: _________________________", ln=True)
+    pdf.cell(0, 10, "Assinatura do Servidor: ____________________________", ln=True)
     pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
-    pdf.cell(0, 10, "Data: _______/________/_________", ln=True)
-    pdf_path = "relatorio_ocorrencias.pdf"
-    pdf.output(pdf_path)
-    return pdf_path
+    pdf.cell(0, 10, "Data: ______/______/________", ln=True)
+    
+    caminho = "relatorio_ocorrencias.pdf"
+    pdf.output(caminho)
+    return caminho
 
 def pagina_ocorrencias():
     st.title("Registro de Ocorrências 📋")
