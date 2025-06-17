@@ -132,7 +132,8 @@ def exportar_ocorrencias_para_pdf(resultados):
     pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
     pdf.set_font("Arial", '', 12)
     for cgm, nome, data, desc in resultados:
-        pdf.multi_cell(0, 10, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
+        page_width = pdf.w - 2 * pdf.l_margin
+        pdf.multi_cell(page_width, 10, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
     pdf_path = "relatorio_ocorrencias.pdf"
     pdf.output(pdf_path)
     return pdf_path
