@@ -119,6 +119,8 @@ def exportar_ocorrencias_para_word(resultados):
     doc.add_heading("Relatório de Ocorrências", level=1)
     for cgm, nome, data, desc in resultados:
         doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
+    doc.add_paragraph("\n\nAssinatura do Funcionário: ____________________________")
+    doc.add_paragraph("\nAssinatura do Responsável: ____________________________")
     doc_path = "relatorio_ocorrencias.docx"
     doc.save(doc_path)
     return doc_path
