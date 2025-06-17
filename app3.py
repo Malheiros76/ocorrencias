@@ -119,7 +119,7 @@ def exportar_ocorrencias_para_word(resultados):
     doc.add_heading("Relatório de Ocorrências", level=1)
     for cgm, nome, data, desc in resultados:
         doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
-    doc.add_paragraph("\n\nAssinatura do Funcionário: ____________________________")
+    doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________")
     doc.add_paragraph("\nAssinatura do Responsável: ____________________________")
     doc.add_paragraph("\nData: _______/_______/_________")
     doc_path = "relatorio_ocorrencias.docx"
@@ -138,7 +138,7 @@ def exportar_ocorrencias_para_pdf(resultados):
         page_width = pdf.w - 2 * pdf.l_margin
         pdf.multi_cell(page_width, 10, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
     pdf.ln(10)
-    pdf.cell(0, 10, "Assinatura do Funcionário: _________________________", ln=True)
+    pdf.cell(0, 10, "Assinatura do Servidor: _________________________", ln=True)
     pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
     pdf.cell(0, 10, "Data: _______/________/_________", ln=True)
     pdf_path = "relatorio_ocorrencias.pdf"
