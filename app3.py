@@ -136,6 +136,9 @@ def exportar_ocorrencias_para_pdf(resultados):
     for cgm, nome, data, desc in resultados:
         page_width = pdf.w - 2 * pdf.l_margin
         pdf.multi_cell(page_width, 10, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}\n----------------------")
+    pdf.ln(10)
+    pdf.cell(0, 10, "Assinatura do Funcionário: _________________________", ln=True)
+    pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
     pdf_path = "relatorio_ocorrencias.pdf"
     pdf.output(pdf_path)
     return pdf_path
