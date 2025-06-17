@@ -244,18 +244,19 @@ def pagina_cadastro_usuario():
             else:
                 st.warning("Preencha todos os campos.")
 
+# Lista Alunos
 def pagina_lista_alunos():
-    st.title("Lista de Alunos Cadastrados")
+    st.header("Lista de Alunos")
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT cgm, nome, telefone FROM alunos")
+    cursor.execute("SELECT cgm, nome, telefone FROM alunos ORDER BY nome ASC")
     alunos = cursor.fetchall()
     conn.close()
     if alunos:
-        st.dataframe(alunos, use_container_width=True)
+        st.dataframe(alunos)
     else:
-        st.warning("Nenhum aluno cadastrado ainda.")
-
+        st.warning("Nenhum aluno cadastrado.")
+        
 def menu_principal():
     st.sidebar.image("BRASÃO.png", width=200)
     menu = ["Cadastro de Alunos", "Ocorrências", "Cadastro de Usuário", "Lista de Alunos"]
