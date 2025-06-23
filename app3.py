@@ -64,20 +64,9 @@ def excluir_backups_antigos():
 
 def login():
     st.title("Login 👤")
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
-    if st.button("Entrar"):
-        conn = conectar()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuarios WHERE usuario=? AND senha=?", (usuario, senha))
-        resultado = cursor.fetchone()
-        conn.close()
-        if resultado:
-            st.session_state['logado'] = True
-            st.session_state['pagina'] = "Menu"
-            st.rerun()
-        else:
-            st.error("Usuário ou senha incorretos!")
+    usuario = st.text_input("Usuário", key="login_usuario")
+    senha = st.text_input("Senha", type="password", key="login_senha")
+    if st.button("Entrar", key="btn_login"):
 
 def pagina_cadastro_alunos():
     st.header("Cadastro de Alunos 👦👧")
