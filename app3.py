@@ -512,7 +512,32 @@ def menu():
         pagina_cadastro_usuario()
     elif escolha == "Lista de Alunos":
         pagina_lista_alunos()
-    
+
+def fazer_backup():
+    # Criar pasta de backups se não existir
+    if not os.path.exists("backups"):
+        os.makedirs("backups")
+
+    # Nome do arquivo de backup com data e hora
+    agora = datetime.now().strftime("%Y%m%d_%H%M%S")
+    caminho_origem = "ocorrencias.db"
+    caminho_backup = os.path.join("backups", f"backup_{agora}.db")
+
+    # Copiar o banco
+    shutil.copyfile(caminho_origem, caminho_backup)
+    print(f"Backup criado: {caminho_backup}")
+
+    # Excluir backups com mais de 7 dias
+    agora_epoch = datetime.now().timestamp()
+    for arquivo in os.listdir("backups"):
+        if arquivo.startswith("backup_") and arquivo.endswith(".db"):
+            caminho_arquivo = os.path.join("backups", arquivo)
+            modificacao = os.path.getmtime(caminho_arquivo)
+            idade_em_segundos = agora_epoch - modificacao
+            if idade_em_segundos > 7 * 24 * 60 * 60:
+                os.remove(caminho_arquivo)
+                print(f"Backup antigo excluído: {caminho_arquivo}")
+ 
 # Execução
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
