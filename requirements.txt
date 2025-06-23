@@ -2,3 +2,6 @@ streamlit
 python-docx
 reportlab
 fpdf2
+pandas
+fpdf
+pillow
