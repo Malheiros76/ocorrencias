@@ -362,7 +362,7 @@ def login():
         if resultado:
             st.session_state['logado'] = True
             st.session_state['usuario'] = usuario.strip()
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuário ou senha incorretos!")
 
