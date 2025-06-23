@@ -325,9 +325,7 @@ def pagina_exportar():
                 if st.button("📄 PDF"):
                     caminho_pdf = f"relatorio_{nome_selecionado.replace(' ', '_')}.pdf"
                     c = canvas.Canvas(caminho_pdf, pagesize=A4)
-                    
-                   import os
-from reportlab.lib.utils import ImageReader
+          
 
             caminho_imagem = os.path.join(os.getcwd(), "CABEÇARIOAPP.png")
 
