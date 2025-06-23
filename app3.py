@@ -77,7 +77,7 @@ def login():
         cursor.execute("SELECT * FROM usuarios WHERE usuario=? AND senha=?", (usuario, senha))
         if cursor.fetchone():
             st.session_state["logado"] = True
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuário ou senha inválidos.")
         conn.close()
