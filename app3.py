@@ -81,12 +81,18 @@ def login():
 
 def pagina_cadastro_alunos():
     st.header("Cadastro de Alunos 👦👧")
-    cgm = st.text_input("CGM")
-    nome = st.text_input("Nome")
-    telefone = st.text_input("Telefone")
 
-    if st.button("Salvar Aluno"):
-        if cgm and nome:
+    cgm = st.text_input("CGM", key="cadastro_cgm")
+    nome = st.text_input("Nome", key="cadastro_nome")
+    data_nascimento = st.date_input("Data de Nascimento", key="cadastro_data_nasc")
+    telefone = st.text_input("Telefone", key="cadastro_telefone")
+    responsavel = st.text_input("Responsável", key="cadastro_responsavel")
+    data = st.date_input("Data de Cadastro", key="cadastro_data_cadastro")
+    turma = st.text_input("Turma", key="cadastro_turma")
+
+    if st.button("Salvar Aluno", key="btn_salvar_aluno"):
+        # código...
+           if cgm and nome:
             conn = conectar()
             cursor = conn.cursor()
             cursor.execute("INSERT OR REPLACE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", (cgm, nome, telefone))
