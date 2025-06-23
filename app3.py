@@ -337,8 +337,7 @@ def pagina_exportar():
                     st.warning(f"⚠️ Imagem não encontrada em: {caminho_imagem}")
                 except Exception as e:
                     st.error(f"⚠️ Erro ao carregar a imagem no PDF: {e}")
-
-                    
+                
                     y = 700
                     c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
                     y -= 30
