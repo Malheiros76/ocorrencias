@@ -327,46 +327,36 @@ def pagina_exportar():
                     c = canvas.Canvas(caminho_pdf, pagesize=A4)
           
 
-            caminho_imagem = os.path.join(os.getcwd(), "CABEÇARIOAPP.png")
-
-            try:
-                if os.path.exists(caminho_imagem):
-                    logo = ImageReader(caminho_imagem)
-                    c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                else:
-                    st.warning(f"⚠️ Imagem não encontrada em: {caminho_imagem}")
-                except Exception as e:
-                    st.error(f"⚠️ Erro ao carregar a imagem no PDF: {e}")
+           def exportar_ocorrencias_para_pdf(resultados):
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", "B", 16)
                 
-                    y = 700
-                    c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
-                    y -= 30
-                    
-                    for cgm, nome, data, desc, telefone in ocorrencias_aluno:
-                        texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
-                        for linha in texto.split('\n'):
-                            c.drawString(50, y, linha)
-                            y -= 15
-                            if y < 80:
-                                c.showPage()
-                                try:
-                                    c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                                except:
-                                    pass
-                                y = 700
-                    
-                    # Área de assinatura
-                    y -= 30
-                    c.drawString(50, y, "Assinatura do Servidor: ____________________________")
-                    y -= 20
-                    c.drawString(50, y, "Assinatura do Responsável: ____________________________")
-                    y -= 20
-                    c.drawString(50, y, "Data: ____/____/______")
-                    c.save()
-                    
-                    with open(caminho_pdf, "rb") as f:
-                        st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
+                # Cabeçalho com imagem
+                pdf.image("CABEÇARIOAPP.png", x=10, y=8, w=190)
+                pdf.ln(35)  # Espaço após a imagem
+                
+                pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
+                pdf.ln(5)
+                
+                pdf.set_font("Arial", size=12)
             
+                for cgm, nome, data, desc in resultados:
+                    pdf.multi_cell(0, 8, f"CGM: {cgm}\nNome: {nome}\nData: {data}\nDescrição: {desc}")
+                    pdf.ln(2)
+                    pdf.cell(0, 0, "-" * 70, ln=True)  # Linha de separação
+                    pdf.ln(5)
+            
+                # Espaço para assinaturas
+                pdf.ln(10)
+                pdf.cell(0, 10, "Assinatura do Servidor: ____________________________", ln=True)
+                pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
+                pdf.cell(0, 10, "Data: ______/______/________", ln=True)
+                
+                caminho = "relatorio_ocorrencias.pdf"
+                pdf.output(caminho)
+                return caminho
+                        
             with col3:
                 if st.button("📱 WhatsApp"):
                     # Obter telefone do aluno
