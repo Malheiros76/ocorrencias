@@ -75,7 +75,7 @@ def login():
         if resultado:
             st.session_state['logado'] = True
             st.session_state['pagina'] = "Menu"
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuário ou senha incorretos!")
 
