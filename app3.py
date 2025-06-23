@@ -222,7 +222,7 @@ def pagina_exportar():
 
 def menu():
     st.sidebar.image("BRASÃO.png", width=200)
-    opcao = st.sidebar.selectbox("Menu", ["Cadastro de Alunos", "Lista de Alunos", "Ocorrências", "Exportar Relatórios", "Cadastro de Usuário"])
+    opcao = st.sidebar.selectbox("Menu", ["Cadastro de Alunos", "Lista de Alunos", "Ocorrências", "Exportar Relatórios", "Cadastro de Usuário"], key="menu_principal")
 
     if opcao == "Cadastro de Alunos":
         pagina_cadastro_alunos()
