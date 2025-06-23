@@ -51,6 +51,12 @@ def criar_backup():
     agora = datetime.now().strftime("%Y%m%d_%H%M%S")
     shutil.copy("ocorrencias.db", f"backups/backup_{agora}.db")
 
+from datetime import datetime, timedelta
+import os
+import streamlit as st
+import pandas as pd
+import sqlite3
+
 def excluir_backups_antigos():
     pasta = "backups"
     limite = datetime.now() - timedelta(days=7)
@@ -62,11 +68,21 @@ def excluir_backups_antigos():
                 if tempo_modificacao < limite:
                     os.remove(caminho)
 
+def conectar():
+    return sqlite3.connect("ocorrencias.db", check_same_thread=False)
+
 def login():
     st.title("Login 👤")
     usuario = st.text_input("Usuário", key="login_usuario")
     senha = st.text_input("Senha", type="password", key="login_senha")
     if st.button("Entrar", key="btn_login"):
+        # Aqui você coloca sua lógica de autenticação, por exemplo:
+        if usuario == "admin" and senha == "123":
+            st.session_state['logado'] = True
+            st.success("Login realizado com sucesso!")
+            st.experimental_rerun()
+        else:
+            st.error("Usuário ou senha incorretos!")
 
 def pagina_cadastro_alunos():
     st.header("Cadastro de Alunos 👦👧")
@@ -80,14 +96,18 @@ def pagina_cadastro_alunos():
     turma = st.text_input("Turma", key="cadastro_turma")
 
     if st.button("Salvar Aluno", key="btn_salvar_aluno"):
-        # código...
-           if cgm and nome:
+        if cgm and nome:
             conn = conectar()
             cursor = conn.cursor()
-            cursor.execute("INSERT OR REPLACE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", (cgm, nome, telefone))
+            cursor.execute(
+                "INSERT OR REPLACE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)",
+                (cgm, nome, telefone)
+            )
             conn.commit()
             conn.close()
             st.success("Aluno salvo com sucesso!")
+        else:
+            st.warning("Preencha pelo menos o CGM e o Nome.")
 
     arquivo_txt = st.file_uploader("Importar alunos via TXT", type=["txt"])
     if arquivo_txt:
@@ -97,7 +117,10 @@ def pagina_cadastro_alunos():
             conn = conectar()
             cursor = conn.cursor()
             for _, row in df.iterrows():
-                cursor.execute("INSERT OR REPLACE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)", (row["CGM"], row["Nome"], row["Telefone"]))
+                cursor.execute(
+                    "INSERT OR REPLACE INTO alunos (cgm, nome, telefone) VALUES (?, ?, ?)",
+                    (row["CGM"], row["Nome"], row["Telefone"])
+                )
             conn.commit()
             conn.close()
             st.success("Importação concluída!")
