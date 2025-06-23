@@ -503,6 +503,8 @@ def menu():
         pagina_cadastro_usuario()
     elif escolha == "Lista de Alunos":
         pagina_lista_alunos()
+    elif menu == "Backup Manual":
+        botao_backup_manual()
 
 # Execução
 if "logado" not in st.session_state:
