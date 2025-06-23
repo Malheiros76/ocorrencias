@@ -326,11 +326,20 @@ def pagina_exportar():
                     caminho_pdf = f"relatorio_{nome_selecionado.replace(' ', '_')}.pdf"
                     c = canvas.Canvas(caminho_pdf, pagesize=A4)
                     
-                    try:
-                        logo = ImageReader("CABEÇARIOAPP.png")
-                        c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                    except:
-                        pass
+                   import os
+from reportlab.lib.utils import ImageReader
+
+            caminho_imagem = os.path.join(os.getcwd(), "CABEÇARIOAPP.png")
+
+            try:
+                if os.path.exists(caminho_imagem):
+                    logo = ImageReader(caminho_imagem)
+                    c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
+                else:
+                    st.warning(f"⚠️ Imagem não encontrada em: {caminho_imagem}")
+                except Exception as e:
+                    st.error(f"⚠️ Erro ao carregar a imagem no PDF: {e}")
+
                     
                     y = 700
                     c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
