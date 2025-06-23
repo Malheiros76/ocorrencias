@@ -18,6 +18,16 @@ def conectar():
 def inicializar_db():
     conn = conectar()
     cursor = conn.cursor()
+  
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT,
+        usuario TEXT UNIQUE,
+        senha TEXT,
+        setor TEXT
+    )
+""")
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS alunos (
             cgm TEXT PRIMARY KEY,
