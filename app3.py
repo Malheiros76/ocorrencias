@@ -8,6 +8,49 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 import urllib.parse
 import os
+import shutil
+
+# Nome do banco
+DB_FILE = "ocorrencias.db"
+BACKUP_FOLDER = "backups"
+
+# Função para criar o backup
+def criar_backup():
+    if not os.path.exists(BACKUP_FOLDER):
+        os.makedirs(BACKUP_FOLDER)
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    backup_filename = f"backup_{timestamp}.db"
+    backup_path = os.path.join(BACKUP_FOLDER, backup_filename)
+    try:
+        shutil.copyfile(DB_FILE, backup_path)
+        st.success(f"Backup criado: {backup_filename}")
+    except Exception as e:
+        st.error(f"Erro ao criar backup: {e}")
+
+# Função para excluir backups com mais de 7 dias
+def excluir_backups_antigos():
+    if os.path.exists(BACKUP_FOLDER):
+        for filename in os.listdir(BACKUP_FOLDER):
+            file_path = os.path.join(BACKUP_FOLDER, filename)
+            if os.path.isfile(file_path):
+                file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+                if datetime.now() - file_time > timedelta(days=7):
+                    try:
+                        os.remove(file_path)
+                        print(f"Backup antigo excluído: {filename}")
+                    except Exception as e:
+                        print(f"Erro ao excluir {filename}: {e}")
+
+# Função que você chama antes de gravar um novo registro
+def backup_antes_registro():
+    excluir_backups_antigos()
+    criar_backup()
+
+# Opcional: Um botão manual na interface do Streamlit
+def botao_backup_manual():
+    st.markdown("### Backup Manual")
+    if st.button("Fazer Backup Agora 🗄️"):
+        criar_backup()
 
 # Função de conexão
 def conectar():
@@ -56,6 +99,12 @@ def login():
             st.rerun()
         else:
             st.error("Usuário ou senha incorretos!")
+        # Antes de gravar no banco
+
+backup_antes_registro()
+        # Agora você segue com o INSERT
+        c.execute("INSERT INTO ocorrencias (...) VALUES (...)", (...))
+        conn.commit()
             
 # Função para formatar mensagem WhatsApp
 def formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno):
