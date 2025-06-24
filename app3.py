@@ -474,8 +474,7 @@ def pagina_exportar():
                     mensagem_encoded = urllib.parse.quote(mensagem)
                     link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
                 
-                    #st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
-")
+                    #st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)")
                 else:
                     st.warning("Telefone não disponível para este aluno.")
 
@@ -510,8 +509,7 @@ def pagina_exportar():
                 numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 mensagem_encoded = urllib.parse.quote(mensagem)
                 link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
-                #st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
-")
+                #st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)")
             else:
                 st.warning("Telefone não disponível para este aluno.")
 def pagina_exportar():
@@ -712,8 +710,7 @@ def pagina_exportar():
                     mensagem_encoded = urllib.parse.quote(mensagem)
                     link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
                 
-                    st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
-")
+                    st.markdown(f"mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)")
                 else:
                     st.warning("Telefone não disponível para este aluno.")
 
