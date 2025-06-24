@@ -462,24 +462,22 @@ def pagina_exportar():
                 ocorrencias_por_aluno[nome] = []
             ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
         
-        for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
-            with st.expander(f"📱 WhatsApp - {nome_aluno}"):
-                # Obter telefone do primeiro registro (todos devem ser iguais)
-                telefone_aluno = ocorrencias_aluno[0][4]
-                
-               if telefone_aluno:
-                    mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
-                
-                    # Preview da mensagem
-                    st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
-                
-                    numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                    mensagem_encoded = urllib.parse.quote(mensagem)
-                    link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
-                
-                    st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
-                else:
-                    st.warning("Telefone não disponível para este aluno.")
+       for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
+    with st.expander(f"📱 WhatsApp - {nome_aluno}"):
+        telefone_aluno = ocorrencias_aluno[0][4]
+
+        if telefone_aluno:
+            mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+
+            st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+
+            numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+            mensagem_encoded = urllib.parse.quote(mensagem)
+            link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+
+            st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+        else:
+            st.warning("Telefone não disponível para este aluno.")
 # Login
 def login():
     st.title("Login 👤")
