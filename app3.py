@@ -8,6 +8,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 import urllib.parse
 import os
+from reportlab.lib.pagesizes import A4
 
 # Função de conexão
 def conectar():
