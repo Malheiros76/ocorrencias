@@ -45,8 +45,9 @@ def inicializar_db():
             setor TEXT
         )
     """)
-conn.commit()
-conn.close()
+    conn.commit()
+    conn.close()
+
 
 # Login
 def login():
