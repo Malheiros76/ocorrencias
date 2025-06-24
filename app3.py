@@ -452,17 +452,17 @@ def pagina_exportar():
                 with open(caminho_pdf, "rb") as f:
                     st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
 
-        # Seção para envio via WhatsApp por aluno
-        st.subheader("📱 Envio via WhatsApp")
-        
-        # Agrupar ocorrências por aluno
-        ocorrencias_por_aluno = {}
-        for cgm, nome, data, desc, telefone in resultados:
-            if nome not in ocorrencias_por_aluno:
-                ocorrencias_por_aluno[nome] = []
-            ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
-        
-       for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
+       # Seção para envio via WhatsApp por aluno
+st.subheader("📱 Envio via WhatsApp")
+
+# Agrupar ocorrências por aluno
+ocorrencias_por_aluno = {}
+for cgm, nome, data, desc, telefone in resultados:
+    if nome not in ocorrencias_por_aluno:
+        ocorrencias_por_aluno[nome] = []
+    ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
+
+for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
     with st.expander(f"📱 WhatsApp - {nome_aluno}"):
         telefone_aluno = ocorrencias_aluno[0][4]
 
@@ -478,6 +478,7 @@ def pagina_exportar():
             st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
         else:
             st.warning("Telefone não disponível para este aluno.")
+
 # Login
 def login():
     st.title("Login 👤")
