@@ -301,6 +301,7 @@ def pagina_exportar():
         alunos_nomes = [f"{nome} (CGM: {cgm})" for cgm, nome in alunos_com_ocorrencias]
         
         if alunos_nomes:
+            key="aluno_exportar_selectbox"
             aluno_selecionado = st.selectbox("Selecione o aluno:", alunos_nomes)
             cgm_selecionado = aluno_selecionado.split("CGM: ")[1].replace(")", "")
             nome_selecionado = aluno_selecionado.split(" (CGM:")[0]
