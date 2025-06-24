@@ -1,13 +1,13 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
+import urllib.parse
+import os
 from datetime import datetime, timedelta
 from docx import Document
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
-import urllib.parse
-import os
 
 # Função de conexão
 def conectar():
