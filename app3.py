@@ -385,18 +385,19 @@ def pagina_exportar():
                     tel_result = cursor.fetchone()
                     conn.close()
                     
-                    if tel_result and tel_result[0]:
-                        telefone_aluno = tel_result[0]
-                        mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_selecionado)
-                        
-                        # Mostrar preview da mensagem
-                        with st.expander("📱 Preview da Mensagem WhatsApp"):
-                            st.text(mensagem)
-                        
-                          link_whatsapp = gerar_link_whatsapp(telefone_aluno, mensagem)
-                          st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
-                    else:
-                        st.warning("Telefone não cadastrado para este aluno.")
+                if telefone_aluno:
+                    mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+                
+                    # Preview da mensagem
+                    st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+                
+                    numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                    mensagem_encoded = urllib.parse.quote(mensagem)
+                    link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+                
+                    st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+                else:
+                    st.warning("Telefone não disponível para este aluno.")
 
     else:
         # Exportação completa (código original)
@@ -466,17 +467,19 @@ def pagina_exportar():
                 # Obter telefone do primeiro registro (todos devem ser iguais)
                 telefone_aluno = ocorrencias_aluno[0][4]
                 
-                if telefone_aluno:
+               if telefone_aluno:
                     mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
-                    
+                
                     # Preview da mensagem
                     st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
-                    
-                       link_whatsapp = gerar_link_whatsapp(telefone_aluno, mensagem)
-                       st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+                
+                    numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                    mensagem_encoded = urllib.parse.quote(mensagem)
+                    link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+                
+                    st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
                 else:
                     st.warning("Telefone não disponível para este aluno.")
-
 # Login
 def login():
     st.title("Login 👤")
