@@ -322,7 +322,7 @@ def pagina_exportar():
                         st.download_button("📥 Baixar Word", f, file_name=caminho_word)
             
                     with col2:
-                        ifrom reportlab.lib.pagesizes import A4
+                        from reportlab.lib.pagesizes import A4
 
                         # ...dentro do seu botão PDF...
                         
