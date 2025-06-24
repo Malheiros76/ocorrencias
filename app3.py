@@ -393,11 +393,8 @@ def pagina_exportar():
                         with st.expander("📱 Preview da Mensagem WhatsApp"):
                             st.text(mensagem)
                         
-                        numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                        mensagem_encoded = urllib.parse.quote(mensagem)
-                        link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
-                        
-                        st.markdown(f"[👉 Enviar Relatório via WhatsApp para {telefone_aluno}]({link_whatsapp})")
+                          link_whatsapp = gerar_link_whatsapp(telefone_aluno, mensagem)
+                          st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
                     else:
                         st.warning("Telefone não cadastrado para este aluno.")
 
@@ -475,11 +472,8 @@ def pagina_exportar():
                     # Preview da mensagem
                     st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
                     
-                    numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                    mensagem_encoded = urllib.parse.quote(mensagem)
-                    link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
-                    
-                    st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+                       link_whatsapp = gerar_link_whatsapp(telefone_aluno, mensagem)
+                       st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
                 else:
                     st.warning("Telefone não disponível para este aluno.")
 
