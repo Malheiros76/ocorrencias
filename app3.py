@@ -306,7 +306,7 @@ def pagina_exportar():
                 if st.button("📄 Word"):
                     doc = Document()
                     try:
-                        doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
+                        doc.add_picture("CABECARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
                     except:
                         pass
                     doc.add_heading(f"Relatório de Ocorrências - {nome_selecionado}", 0)
