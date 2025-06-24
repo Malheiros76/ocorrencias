@@ -296,7 +296,85 @@ def pagina_exportar():
     )
 
     if opcao_export == "Por Aluno Específico":
-        # Obter lista de alunos com ocorrências
+         # Obter lista de alunos com ocorrências
+        alunos_com_ocorrencias = list(set([(cgm, nome) for cgm, nome, _, _, _ in resultados]))
+        alunos_nomes = [f"{nome} (CGM: {cgm})" for cgm, nome in alunos_com_ocorrencias]
+        
+        if alunos_nomes:
+            aluno_selecionado = st.selectbox("Selecione o aluno:", alunos_nomes)
+            cgm_selecionado = aluno_selecionado.split("CGM: ")[1].replace(")", "")
+            nome_selecionado = aluno_selecionado.split(" (CGM:")[0]
+            
+            # Filtrar ocorrências do aluno selecionado
+            ocorrencias_aluno = [r for r in resultados if r[0] == cgm_selecionado]
+            
+            # Botões de exportação para aluno específico
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("📄 Word"):
+                    doc = Document()
+                    try:
+                        doc.add_picture("CABECARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
+                    except:
+                        pass
+                    doc.add_heading(f"Relatório de Ocorrências - {nome_selecionado}", 0)
+                    
+                    for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                        doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------")
+                    
+                    doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________\nAssinatura do Responsável: ____________________________\nData: ____/____/______")
+                    caminho_word = f"relatorio_{nome_selecionado.replace(' ', '_')}.docx"
+                    doc.save(caminho_word)
+                    
+                    with open(caminho_word, "rb") as f:
+                        st.download_button("📥 Baixar Word", f, file_name=caminho_word)
+            
+                    with col2:
+                        from reportlab.lib.pagesizes import A4
+
+                        # ...dentro do seu botão PDF...
+                        
+                        c = canvas.Canvas(caminho_pdf, pagesize=A4)
+                        width, height = A4  # Largura e altura da página em pontos
+                        
+                        try:
+                            logo = ImageReader("CABECARIOAPP.png")
+                            # Ajuste de largura do cabeçalho
+                            largura_logo = 500
+                            x_pos = (width - largura_logo) / 2  # Centraliza horizontalmente
+                            y_pos = height - 100  # Fica no topo, com margem de 100 pts abaixo
+                        
+                            c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar cabeçalho: {e}")
+                        
+                        # Agora começa o conteúdo, abaixo do cabeçalho
+                        y = y_pos - 50  # Um pouco abaixo do cabeçalho
+                        c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
+                        y -= 30
+                        
+                        for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                            texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
+                            for linha in texto.split('\n'):
+                                c.drawString(50, y, linha)
+                                y -= 15
+                                if y < 80:
+                                    c.showPage()
+                                    try:
+                                        c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                                    except:
+                                        pass
+                                    y = y_pos - 50
+                        
+                        # Área de assinatura
+                        y -= 30
+                        c.drawString(50, y, "Assinatura do Servidor: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Assinatura do Responsável: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Data: ____/____/______")
+                        c.save() # Obter lista de alunos com ocorrências
         alunos_com_ocorrencias = list(set([(cgm, nome) for cgm, nome, _, _, _ in resultados]))
         alunos_nomes = [f"{nome} (CGM: {cgm})" for cgm, nome in alunos_com_ocorrencias]
         
@@ -400,85 +478,276 @@ def pagina_exportar():
                 else:
                     st.warning("Telefone não disponível para este aluno.")
 
-    else:
-        # Exportação completa (código original)
+    else:      
+        # Exportação completa (seu código original)
         col1, col2 = st.columns(2)
-        
         with col1:
             if st.button("📄 Exportar para Word"):
-                doc = Document()
-                try:
-                    doc.add_picture("CABEÇARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
-                except:
-                    pass
-                doc.add_heading("Relatório de Ocorrências", 0)
-                for cgm, nome, data, desc, telefone in resultados:
-                    doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------")
-                doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________\nAssinatura do Responsável: ____________________________\nData: ____/____/______")
-                caminho_word = "relatorio_ocorrencias.docx"
-                doc.save(caminho_word)
-                with open(caminho_word, "rb") as f:
-                    st.download_button("📥 Baixar Word", f, file_name=caminho_word)
-
+                # seu código para Word
+                pass
         with col2:
             if st.button("📄 Exportar para PDF"):
-                caminho_pdf = "relatorio_ocorrencias.pdf"
-                c = canvas.Canvas(caminho_pdf, pagesize=A4)
-                try:
-                    logo = ImageReader("CABEÇARIOAPP.png")
-                    c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                except:
-                    pass
-                y = 700
-                for cgm, nome, data, desc, telefone in resultados:
-                    texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
-                    for linha in texto.split('\n'):
-                        c.drawString(50, y, linha)
-                        y -= 15
-                        if y < 80:
-                            c.showPage()
-                            try:
-                                c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                            except:
-                                pass
-                            y = 700
-                # Área de assinatura
-                y -= 30
-                c.drawString(50, y, "Assinatura do Servidor: ____________________________")
-                y -= 20
-                c.drawString(50, y, "Assinatura do Responsável: ____________________________")
-                y -= 20
-                c.drawString(50, y, "Data: ____/____/______")
-                c.save()
-                with open(caminho_pdf, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
+                # seu código para PDF
+                pass
 
-       # Seção para envio via WhatsApp por aluno
-st.subheader("📱 Envio via WhatsApp")
+    # --- AQUI começa a seção de envio via WhatsApp ---
+    st.subheader("📱 Envio via WhatsApp")
 
-# Agrupar ocorrências por aluno
-ocorrencias_por_aluno = {}
-for cgm, nome, data, desc, telefone in resultados:
-    if nome not in ocorrencias_por_aluno:
-        ocorrencias_por_aluno[nome] = []
-    ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
+    # Agrupar ocorrências por aluno
+    ocorrencias_por_aluno = {}
+    for cgm, nome, data, desc, telefone in resultados:
+        if nome not in ocorrencias_por_aluno:
+            ocorrencias_por_aluno[nome] = []
+        ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
+    
+    for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
+        with st.expander(f"📱 WhatsApp - {nome_aluno}"):
+            telefone_aluno = ocorrencias_aluno[0][4]
+            if telefone_aluno:
+                mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+                st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+                numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                mensagem_encoded = urllib.parse.quote(mensagem)
+                link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+                st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+            else:
+                st.warning("Telefone não disponível para este aluno.")
+def pagina_exportar():
+    st.header("Exportar Relatório de Ocorrências 📄")
 
-for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
-    with st.expander(f"📱 WhatsApp - {nome_aluno}"):
-        telefone_aluno = ocorrencias_aluno[0][4]
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT cgm, nome, data, descricao, telefone FROM ocorrencias ORDER BY nome, data")
+    resultados = cursor.fetchall()
+    conn.close()
 
-        if telefone_aluno:
-            mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+    if not resultados:
+        st.warning("Nenhuma ocorrência para exportar.")
+        return
 
-            st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+    # Opção para escolher exportação
+    opcao_export = st.radio(
+        "Escolha o tipo de exportação:",
+        ["Relatório Completo", "Por Aluno Específico"]
+    )
 
-            numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-            mensagem_encoded = urllib.parse.quote(mensagem)
-            link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+    if opcao_export == "Por Aluno Específico":
+         # Obter lista de alunos com ocorrências
+        alunos_com_ocorrencias = list(set([(cgm, nome) for cgm, nome, _, _, _ in resultados]))
+        alunos_nomes = [f"{nome} (CGM: {cgm})" for cgm, nome in alunos_com_ocorrencias]
+        
+        if alunos_nomes:
+            aluno_selecionado = st.selectbox("Selecione o aluno:", alunos_nomes)
+            cgm_selecionado = aluno_selecionado.split("CGM: ")[1].replace(")", "")
+            nome_selecionado = aluno_selecionado.split(" (CGM:")[0]
+            
+            # Filtrar ocorrências do aluno selecionado
+            ocorrencias_aluno = [r for r in resultados if r[0] == cgm_selecionado]
+            
+            # Botões de exportação para aluno específico
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("📄 Word"):
+                    doc = Document()
+                    try:
+                        doc.add_picture("CABECARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
+                    except:
+                        pass
+                    doc.add_heading(f"Relatório de Ocorrências - {nome_selecionado}", 0)
+                    
+                    for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                        doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------")
+                    
+                    doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________\nAssinatura do Responsável: ____________________________\nData: ____/____/______")
+                    caminho_word = f"relatorio_{nome_selecionado.replace(' ', '_')}.docx"
+                    doc.save(caminho_word)
+                    
+                    with open(caminho_word, "rb") as f:
+                        st.download_button("📥 Baixar Word", f, file_name=caminho_word)
+            
+                    with col2:
+                        from reportlab.lib.pagesizes import A4
 
-            st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
-        else:
-            st.warning("Telefone não disponível para este aluno.")
+                        # ...dentro do seu botão PDF...
+                        
+                        c = canvas.Canvas(caminho_pdf, pagesize=A4)
+                        width, height = A4  # Largura e altura da página em pontos
+                        
+                        try:
+                            logo = ImageReader("CABECARIOAPP.png")
+                            # Ajuste de largura do cabeçalho
+                            largura_logo = 500
+                            x_pos = (width - largura_logo) / 2  # Centraliza horizontalmente
+                            y_pos = height - 100  # Fica no topo, com margem de 100 pts abaixo
+                        
+                            c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar cabeçalho: {e}")
+                        
+                        # Agora começa o conteúdo, abaixo do cabeçalho
+                        y = y_pos - 50  # Um pouco abaixo do cabeçalho
+                        c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
+                        y -= 30
+                        
+                        for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                            texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
+                            for linha in texto.split('\n'):
+                                c.drawString(50, y, linha)
+                                y -= 15
+                                if y < 80:
+                                    c.showPage()
+                                    try:
+                                        c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                                    except:
+                                        pass
+                                    y = y_pos - 50
+                        
+                        # Área de assinatura
+                        y -= 30
+                        c.drawString(50, y, "Assinatura do Servidor: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Assinatura do Responsável: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Data: ____/____/______")
+                        c.save() # Obter lista de alunos com ocorrências
+        alunos_com_ocorrencias = list(set([(cgm, nome) for cgm, nome, _, _, _ in resultados]))
+        alunos_nomes = [f"{nome} (CGM: {cgm})" for cgm, nome in alunos_com_ocorrencias]
+        
+        if alunos_nomes:
+            aluno_selecionado = st.selectbox("Selecione o aluno:", alunos_nomes)
+            cgm_selecionado = aluno_selecionado.split("CGM: ")[1].replace(")", "")
+            nome_selecionado = aluno_selecionado.split(" (CGM:")[0]
+            
+            # Filtrar ocorrências do aluno selecionado
+            ocorrencias_aluno = [r for r in resultados if r[0] == cgm_selecionado]
+            
+            # Botões de exportação para aluno específico
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                if st.button("📄 Word"):
+                    doc = Document()
+                    try:
+                        doc.add_picture("CABECARIOAPP.png", width=doc.sections[0].page_width - doc.sections[0].left_margin - doc.sections[0].right_margin)
+                    except:
+                        pass
+                    doc.add_heading(f"Relatório de Ocorrências - {nome_selecionado}", 0)
+                    
+                    for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                        doc.add_paragraph(f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------")
+                    
+                    doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________\nAssinatura do Responsável: ____________________________\nData: ____/____/______")
+                    caminho_word = f"relatorio_{nome_selecionado.replace(' ', '_')}.docx"
+                    doc.save(caminho_word)
+                    
+                    with open(caminho_word, "rb") as f:
+                        st.download_button("📥 Baixar Word", f, file_name=caminho_word)
+            
+                    with col2:
+                        from reportlab.lib.pagesizes import A4
+
+                        # ...dentro do seu botão PDF...
+                        
+                        c = canvas.Canvas(caminho_pdf, pagesize=A4)
+                        width, height = A4  # Largura e altura da página em pontos
+                        
+                        try:
+                            logo = ImageReader("CABECARIOAPP.png")
+                            # Ajuste de largura do cabeçalho
+                            largura_logo = 500
+                            x_pos = (width - largura_logo) / 2  # Centraliza horizontalmente
+                            y_pos = height - 100  # Fica no topo, com margem de 100 pts abaixo
+                        
+                            c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar cabeçalho: {e}")
+                        
+                        # Agora começa o conteúdo, abaixo do cabeçalho
+                        y = y_pos - 50  # Um pouco abaixo do cabeçalho
+                        c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
+                        y -= 30
+                        
+                        for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                            texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
+                            for linha in texto.split('\n'):
+                                c.drawString(50, y, linha)
+                                y -= 15
+                                if y < 80:
+                                    c.showPage()
+                                    try:
+                                        c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                                    except:
+                                        pass
+                                    y = y_pos - 50
+                        
+                        # Área de assinatura
+                        y -= 30
+                        c.drawString(50, y, "Assinatura do Servidor: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Assinatura do Responsável: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Data: ____/____/______")
+                        c.save()
+
+                    
+            with col3:
+                if st.button("📱 WhatsApp"):
+                    # Obter telefone do aluno
+                    conn = conectar()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT telefone FROM alunos WHERE cgm=?", (cgm_selecionado,))
+                    tel_result = cursor.fetchone()
+                    conn.close()
+                    
+                if telefone_aluno:
+                    mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+                
+                    # Preview da mensagem
+                    st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+                
+                    numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                    mensagem_encoded = urllib.parse.quote(mensagem)
+                    link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+                
+                    st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+                else:
+                    st.warning("Telefone não disponível para este aluno.")
+
+    else:      
+        # Exportação completa (seu código original)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📄 Exportar para Word"):
+                # seu código para Word
+                pass
+        with col2:
+            if st.button("📄 Exportar para PDF"):
+                # seu código para PDF
+                pass
+
+    # --- AQUI começa a seção de envio via WhatsApp ---
+    st.subheader("📱 Envio via WhatsApp")
+
+    # Agrupar ocorrências por aluno
+    ocorrencias_por_aluno = {}
+    for cgm, nome, data, desc, telefone in resultados:
+        if nome not in ocorrencias_por_aluno:
+            ocorrencias_por_aluno[nome] = []
+        ocorrencias_por_aluno[nome].append((cgm, nome, data, desc, telefone))
+    
+    for nome_aluno, ocorrencias_aluno in ocorrencias_por_aluno.items():
+        with st.expander(f"📱 WhatsApp - {nome_aluno}"):
+            telefone_aluno = ocorrencias_aluno[0][4]
+            if telefone_aluno:
+                mensagem = formatar_mensagem_whatsapp(ocorrencias_aluno, nome_aluno)
+                st.text_area("Preview da mensagem:", mensagem, height=200, key=f"preview_{nome_aluno}")
+                numero = telefone_aluno.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                mensagem_encoded = urllib.parse.quote(mensagem)
+                link_whatsapp = f"https://api.whatsapp.com/send?phone=55{numero}&text={mensagem_encoded}"
+                st.markdown(f"[👉 Enviar para {telefone_aluno}]({link_whatsapp})")
+            else:
+                st.warning("Telefone não disponível para este aluno.")
 
 # Login
 def login():
