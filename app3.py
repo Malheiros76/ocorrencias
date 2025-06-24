@@ -327,7 +327,7 @@ def pagina_exportar():
                     c = canvas.Canvas(caminho_pdf, pagesize=A4)
                     
                     try:
-                        logo = ImageReader("CABEÇARIOAPP.png")
+                        logo = ImageReader("CABECARIOAPP.png")
                         c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
                     except:
                         pass
