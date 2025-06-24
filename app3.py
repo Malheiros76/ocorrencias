@@ -322,44 +322,51 @@ def pagina_exportar():
                         st.download_button("📥 Baixar Word", f, file_name=caminho_word)
             
                     with col2:
-                        if st.button("📄 PDF"):
-                            caminho_pdf = f"relatorio_{nome_selecionado.replace(' ', '_')}.pdf"
-                            c = canvas.Canvas(caminho_pdf, pagesize=A4)  # Primeiro cria o canvas
-                    
-                            try:
-                                logo = ImageReader("CABECARIOAPP.png")  # Carregar a imagem
-                                c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)  # Tenta desenhar o cabeçalho
-                            except Exception as e:
-                                st.error(f"Erro ao carregar imagem do cabeçalho: {e}")
-                    
-                            y = 700
-                            c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
-                            y -= 30
-                    
-                            for cgm, nome, data, desc, telefone in ocorrencias_aluno:
-                                texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
-                                for linha in texto.split('\n'):
-                                    c.drawString(50, y, linha)
-                                    y -= 15
-                                    if y < 80:
-                                        c.showPage()
-                                        try:
-                                            c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                                        except:
-                                            pass
-                                        y = 700
-                    
-                            # Área de assinatura
-                            y -= 30
-                            c.drawString(50, y, "Assinatura do Servidor: ____________________________")
-                            y -= 20
-                            c.drawString(50, y, "Assinatura do Responsável: ____________________________")
-                            y -= 20
-                            c.drawString(50, y, "Data: ____/____/______")
-                            c.save()
-                    
-                            with open(caminho_pdf, "rb") as f:
-                                st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
+                        ifrom reportlab.lib.pagesizes import A4
+
+                        # ...dentro do seu botão PDF...
+                        
+                        c = canvas.Canvas(caminho_pdf, pagesize=A4)
+                        width, height = A4  # Largura e altura da página em pontos
+                        
+                        try:
+                            logo = ImageReader("CABECARIOAPP.png")
+                            # Ajuste de largura do cabeçalho
+                            largura_logo = 500
+                            x_pos = (width - largura_logo) / 2  # Centraliza horizontalmente
+                            y_pos = height - 100  # Fica no topo, com margem de 100 pts abaixo
+                        
+                            c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                        except Exception as e:
+                            st.warning(f"Erro ao carregar cabeçalho: {e}")
+                        
+                        # Agora começa o conteúdo, abaixo do cabeçalho
+                        y = y_pos - 50  # Um pouco abaixo do cabeçalho
+                        c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
+                        y -= 30
+                        
+                        for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+                            texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
+                            for linha in texto.split('\n'):
+                                c.drawString(50, y, linha)
+                                y -= 15
+                                if y < 80:
+                                    c.showPage()
+                                    try:
+                                        c.drawImage(logo, x_pos, y_pos, width=largura_logo, preserveAspectRatio=True)
+                                    except:
+                                        pass
+                                    y = y_pos - 50
+                        
+                        # Área de assinatura
+                        y -= 30
+                        c.drawString(50, y, "Assinatura do Servidor: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Assinatura do Responsável: ____________________________")
+                        y -= 20
+                        c.drawString(50, y, "Data: ____/____/______")
+                        c.save()
+
                     
             with col3:
                 if st.button("📱 WhatsApp"):
