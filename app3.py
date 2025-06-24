@@ -190,7 +190,7 @@ def pagina_ocorrencias():
             conn.commit()
             conn.close()
             st.success("Ocorrência salva!")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Preencha CGM e descrição.")
 
