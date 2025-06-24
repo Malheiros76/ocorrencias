@@ -36,17 +36,17 @@ def inicializar_db():
             descricao TEXT
         )
     """)
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nome TEXT,
-        usuario TEXT UNIQUE,
-        senha TEXT,
-        setor TEXT
-    )
-""")
-    conn.commit()
-    conn.close()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT,
+            usuario TEXT UNIQUE,
+            senha TEXT,
+            setor TEXT
+        )
+    """)
+        conn.commit()
+        conn.close()
 
 # Login
 def login():
