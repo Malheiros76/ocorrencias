@@ -321,45 +321,45 @@ def pagina_exportar():
                     with open(caminho_word, "rb") as f:
                         st.download_button("📥 Baixar Word", f, file_name=caminho_word)
             
-            with col2:
-                if st.button("📄 PDF"):
-                    caminho_pdf = f"relatorio_{nome_selecionado.replace(' ', '_')}.pdf"
-                    c = canvas.Canvas(caminho_pdf, pagesize=A4)
-                    
+    with col2:
+    if st.button("📄 PDF"):
+        caminho_pdf = f"relatorio_{nome_selecionado.replace(' ', '_')}.pdf"
+        c = canvas.Canvas(caminho_pdf, pagesize=A4)
+        
+        try:
+            logo = ImageReader("CABECARIOAPP.png")  # Nome corrigido
+            c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
+        except Exception as e:
+            st.error(f"Erro ao carregar imagem do cabeçalho: {e}")
+        
+        y = 700
+        c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
+        y -= 30
+        
+        for cgm, nome, data, desc, telefone in ocorrencias_aluno:
+            texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
+            for linha in texto.split('\n'):
+                c.drawString(50, y, linha)
+                y -= 15
+                if y < 80:
+                    c.showPage()
                     try:
-                        logo = ImageReader("CABECARIOAPP.png")
                         c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
                     except:
                         pass
-                    
                     y = 700
-                    c.drawString(50, y, f"Relatório de Ocorrências - {nome_selecionado}")
-                    y -= 30
-                    
-                    for cgm, nome, data, desc, telefone in ocorrencias_aluno:
-                        texto = f"CGM: {cgm}\nNome: {nome}\nData: {data}\nTelefone: {telefone}\nDescrição: {desc}\n----------------------\n"
-                        for linha in texto.split('\n'):
-                            c.drawString(50, y, linha)
-                            y -= 15
-                            if y < 80:
-                                c.showPage()
-                                try:
-                                    c.drawImage(logo, 50, 750, width=500, preserveAspectRatio=True)
-                                except:
-                                    pass
-                                y = 700
-                    
-                    # Área de assinatura
-                    y -= 30
-                    c.drawString(50, y, "Assinatura do Servidor: ____________________________")
-                    y -= 20
-                    c.drawString(50, y, "Assinatura do Responsável: ____________________________")
-                    y -= 20
-                    c.drawString(50, y, "Data: ____/____/______")
-                    c.save()
-                    
-                    with open(caminho_pdf, "rb") as f:
-                        st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
+        
+        # Área de assinatura
+        y -= 30
+        c.drawString(50, y, "Assinatura do Servidor: ____________________________")
+        y -= 20
+        c.drawString(50, y, "Assinatura do Responsável: ____________________________")
+        y -= 20
+        c.drawString(50, y, "Data: ____/____/______")
+        c.save()
+        
+        with open(caminho_pdf, "rb") as f:
+            st.download_button("📥 Baixar PDF", f, file_name=caminho_pdf)
             
             with col3:
                 if st.button("📱 WhatsApp"):
