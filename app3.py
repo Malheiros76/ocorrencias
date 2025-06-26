@@ -381,11 +381,19 @@ def menu():
     elif pagina == "Usuários":
         pagina_usuarios()
 
+def sair():
+    st.session_state["logado"] = False
+    st.session_state["usuario"] = ""
+    st.session_state["nivel"] = ""
+    st.experimental_rerun()
+    
 # --- Execução ---
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
 
 if not st.session_state["logado"]:
     pagina_login()
+elif st.sidebar.button("🚪 Sair do Sistema"):
+    sair()
 else:
     menu()
