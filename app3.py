@@ -8,7 +8,7 @@ from fpdf import FPDF
 import pandas as pd
 import urllib.parse
 
-st.set_page_config(page_title="Sistema Escolar - MongoDB", layout="centered")
+st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros ", layout="centered")
 
 # --- Estilização Visual ---
 st.markdown("""
@@ -123,7 +123,7 @@ def exportar_ocorrencias_para_pdf(resultados):
 
 # --- Login ---
 def pagina_login():
-    st.markdown("## 👤 Login de Usuário")
+    st.markdown("## 👤 Login de Usuário - V2.0 LSM")
     usuario = st.text_input("Usuário")
     senha = st.text_input("Senha", type="password")
     if st.button("Entrar"):
