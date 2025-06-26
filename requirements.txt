@@ -1,7 +1,7 @@
+pandas
 streamlit
 python-docx
-reportlab
-fpdf2
-pandas
 fpdf
 pillow
+reportlab
+fpdf2
