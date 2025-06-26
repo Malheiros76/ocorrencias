@@ -226,6 +226,41 @@ def pagina_cadastro():
 
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
+    st.markdown("## 🔍 Buscar, Editar ou Excluir Aluno")
+
+    busca_cgm = st.text_input("🔎 Buscar aluno pelo CGM")
+    if busca_cgm:
+        aluno = db.alunos.find_one({"cgm": busca_cgm})
+        if aluno:
+            st.write("👤 **Aluno encontrado:**")
+            with st.form("form_edicao"):
+                novo_nome = st.text_input("Nome", aluno.get("nome", ""))
+                nova_data = st.date_input("Data de Nascimento", pd.to_datetime(aluno.get("data")))
+                novo_telefone = st.text_input("Telefone", aluno.get("telefone", ""))
+                novo_responsavel = st.text_input("Responsável", aluno.get("responsavel", ""))
+                nova_turma = st.text_input("Turma", aluno.get("turma", ""))
+                col1, col2 = st.columns(2)
+                with col1:
+                    atualizar = st.form_submit_button("🔄 Atualizar")
+                with col2:
+                    excluir = st.form_submit_button("🗑️ Excluir")
+
+            if atualizar:
+                db.alunos.update_one({"cgm": busca_cgm}, {"$set": {
+                    "nome": novo_nome,
+                    "data": str(nova_data),
+                    "telefone": novo_telefone,
+                    "responsavel": novo_responsavel,
+                    "turma": nova_turma
+                }})
+                st.success("✅ Aluno atualizado com sucesso!")
+
+            if excluir:
+                db.alunos.delete_one({"cgm": busca_cgm})
+                st.warning("⚠️ Aluno excluído com sucesso!")
+
+        else:
+            st.error("❌ Aluno não encontrado com esse CGM.")
 
 # --- Registro de Ocorrência ---
 def pagina_ocorrencias():
@@ -268,6 +303,32 @@ def pagina_ocorrencias():
                     "descricao": descricao
                 })
                 st.success("✅ Ocorrência registrada com sucesso!")
+    st.markdown("---")
+    st.markdown("## ✏️ Editar ou Excluir Ocorrências")
+
+    if busca_cgm:
+        ocorrencias = list(db.ocorrencias.find({"cgm": busca_cgm}).sort("data", -1))
+
+        if ocorrencias:
+            for i, ocorrencia in enumerate(ocorrencias):
+                with st.expander(f"📌 Ocorrência em {ocorrencia['data']}"):
+                    nova_descricao = st.text_area("Descrição", ocorrencia['descricao'], key=f"desc_{i}")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🔄 Atualizar", key=f"update_{i}"):
+                            db.ocorrencias.update_one(
+                                {"_id": ocorrencia["_id"]},
+                                {"$set": {"descricao": nova_descricao}}
+                            )
+                            st.success("✅ Ocorrência atualizada com sucesso!")
+                            st.experimental_rerun()
+                    with col2:
+                        if st.button("🗑️ Excluir", key=f"delete_{i}"):
+                            db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
+                            st.warning("⚠️ Ocorrência excluída com sucesso!")
+                            st.experimental_rerun()
+        else:
+            st.info("ℹ️ Nenhuma ocorrência registrada para esse CGM.")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
