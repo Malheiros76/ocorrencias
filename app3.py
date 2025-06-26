@@ -379,29 +379,45 @@ def pagina_exportar():
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
         return
-    # Exportar por CGM
-    st.subheader("🔍 Buscar por CGM")
-    cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
-    col1, col2 = st.columns(2)
-    if col1.button("📄 Gerar Word por CGM") and cgm_input:
-        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_word(resultados_filtrados)
-            with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar Word", f, file_name="ocorrencias_cgm.docx")
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
-    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
-        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados)
-            with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar PDF", f, file_name="ocorrencias_cgm.pdf")
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+   import streamlit as st
 
+def pagina_ocorrencias():
+    st.markdown("## 🚨 Registro de Ocorrência")
 
- # --- Botões para exportar tudo ---
+    alunos = list(db.alunos.find())
+    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
+
+    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
+
+    aluno_encontrado = None
+    if busca_cgm:
+        for aluno in alunos_ordenados:
+            if str(aluno['cgm']) == str(busca_cgm):
+                aluno_encontrado = aluno
+                break
+
+    if aluno_encontrado:
+        # Campo de retorno preenchido com o nome do aluno
+        st.text_input("👤 Nome do Aluno", value=aluno_encontrado['nome'], disabled=True)
+
+        # Aqui você pode continuar com os outros campos de ocorrência
+        descricao = st.text_area("📝 Descrição da Ocorrência")
+        servidor = st.text_input("👩‍🏫 Servidor Responsável")
+        if st.button("Salvar Ocorrência"):
+            nova_ocorrencia = {
+                "cgm": aluno_encontrado['cgm'],
+                "nome": aluno_encontrado['nome'],
+                "data": str(date.today()),
+                "descricao": descricao,
+                "servidor": servidor
+            }
+            db.ocorrencias.insert_one(nova_ocorrencia)
+            st.success("✅ Ocorrência registrada com sucesso!")
+
+    elif busca_cgm:
+        st.warning("⚠️ CGM não encontrado. Verifique se digitou corretamente.")
+
+    # --- Botões para exportar tudo ---
     st.subheader("📦 Exportar Todas as Ocorrências")
     if resultados:
         nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
