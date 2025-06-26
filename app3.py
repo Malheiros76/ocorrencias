@@ -99,38 +99,74 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
 Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
 def exportar_ocorrencias_para_word(resultados):
+    from docx import Document
+    from docx.shared import Inches
+
     doc = Document()
     doc.add_picture("CABECARIOAPP.png", width=Inches(6))
     doc.add_heading("Relatório de Ocorrências", level=1)
+
     for ocorr in resultados:
-        doc.add_paragraph(f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}\n----------------------")
+        doc.add_paragraph(
+            f"CGM: {ocorr['cgm']}\n"
+            f"Nome: {ocorr['nome']}\n"
+            f"Data: {ocorr['data']}\n"
+            f"Descrição: {ocorr['descricao']}\n"
+            f"Servidor: {ocorr.get('servidor', '')}\n"
+            "----------------------"
+        )
+
     doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________")
-    doc.add_paragraph("\nAssinatura do Responsável: ____________________________")
-    doc.add_paragraph("\nData: _______/_______/_________")
-    caminho = "relatorio_ocorrencias.docx"
+    doc.add_paragraph("Assinatura do Responsável: ____________________________")
+    doc.add_paragraph("Data: _______/_______/_________")
+
+    if len(resultados) == 1:
+        nome_arquivo = resultados[0]['nome'].replace(" ", "_").lower()
+    else:
+        nome_arquivo = "relatorio_varios_alunos"
+
+    caminho = f"{nome_arquivo}.docx"
     doc.save(caminho)
     return caminho
+
+from fpdf import FPDF
 
 def exportar_ocorrencias_para_pdf(resultados):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
+
     try:
         pdf.image("CABECARIOAPP.png", x=10, y=8, w=190)
     except:
         pass
+
     pdf.ln(35)
     pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
     pdf.set_font("Arial", size=12)
+
     for ocorr in resultados:
-        pdf.multi_cell(0, 8, f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}")
+        pdf.multi_cell(0, 8,
+            f"CGM: {ocorr['cgm']}\n"
+            f"Nome: {ocorr['nome']}\n"
+            f"Data: {ocorr['data']}\n"
+            f"Descrição: {ocorr['descricao']}\n"
+            f"Servidor: {ocorr.get('servidor', '')}"
+        )
         pdf.cell(0, 0, "-" * 70, ln=True)
         pdf.ln(5)
+
     pdf.ln(10)
     pdf.cell(0, 10, "Assinatura do Servidor: ____________________________", ln=True)
     pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
     pdf.cell(0, 10, "Data: ______/______/________", ln=True)
-    caminho = "relatorio_ocorrencias.pdf"
+
+    if len(resultados) == 1:
+        nome_arquivo = resultados[0]['nome'].replace(" ", "_").lower()
+    else:
+        nome_arquivo = "relatorio_varios_alunos"
+
+    caminho = f"{nome_arquivo}.pdf"
     pdf.output(caminho)
     return caminho
 
