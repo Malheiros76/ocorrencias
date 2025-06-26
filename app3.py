@@ -10,6 +10,21 @@ import urllib.parse
 
 st.set_page_config(page_title="Sistema Escolar - 2.0 By Malheiros", layout="centered")
 
+# --- Fundo com imagem base64 ---
+# Substitua a string abaixo com o conteúdo Base64 real da sua imagem de fundo
+fundo_base64 = "data:image/jpg;base64,INSIRA_O_BASE64_DA_SUA_IMAGEM_AQUI"
+
+st.markdown(f"""
+    <style>
+    .stApp {{
+        background-image: url('{fundo_base64}');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        background-position: center;
+    }}
+    </style>
+""", unsafe_allow_html=True)
 # --- Estilização Visual ---
 st.markdown("""
     <style>
