@@ -393,6 +393,9 @@ if "logado" not in st.session_state:
 
 if not st.session_state["logado"]:
     pagina_login()
-elif st.sidebar.button("🚪 Sair do Sistema"):
-   else:
-    menu()
+else:
+    if st.sidebar.button("🚪 Sair do Sistema"):
+        sair()
+    else:
+        menu()
+
