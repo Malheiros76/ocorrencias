@@ -8,27 +8,13 @@ from fpdf import FPDF
 import pandas as pd
 import urllib.parse
 
-st.set_page_config(page_title="Sistema Escolar - 2.0 By Malheiros", layout="centered")
+st.set_page_config(page_title="Sistema Escolar - MongoDB", layout="centered")
 
-# --- Fundo com imagem base64 ---
-# Substitua a string abaixo com o conteúdo Base64 real da sua imagem de fundo
-fundo_base64 = "data:image/jpg;base64,harpia.png"
-
-st.markdown(f"""
-    <style>
-    .stApp {{
-        background-image: url('{fundo_base64}');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        background-position: center;
-    }}
-    </style>
-""", unsafe_allow_html=True)
 # --- Estilização Visual ---
 st.markdown("""
     <style>
         .stApp {
+            background-color: #f2f6fc;
             color: #333333;
             font-family: 'Segoe UI', sans-serif;
         }
@@ -39,7 +25,7 @@ st.markdown("""
             max-width: 1000px;
             margin: auto;
             padding: 2rem;
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: white;
             border-radius: 15px;
             box-shadow: 2px 2px 15px rgba(0,0,0,0.1);
         }
@@ -66,6 +52,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
 # --- Conexão com MongoDB ---
 @st.cache_resource
 def conectar():
@@ -98,82 +85,45 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
 
 Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
-import unicodedata
-from docx import Document
-from docx.shared import Inches
-
 def exportar_ocorrencias_para_word(resultados):
     doc = Document()
     doc.add_picture("CABECARIOAPP.png", width=Inches(6))
     doc.add_heading("Relatório de Ocorrências", level=1)
-
     for ocorr in resultados:
-        doc.add_paragraph(
-            f"CGM: {ocorr['cgm']}\n"
-            f"Nome: {ocorr['nome']}\n"
-            f"Data: {ocorr['data']}\n"
-            f"Descrição: {ocorr['descricao']}\n"
-            f"Servidor: {ocorr.get('servidor', '')}\n"
-            "----------------------"
-        )
-
+        doc.add_paragraph(f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}\n----------------------")
     doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________")
-    doc.add_paragraph("Assinatura do Responsável: ____________________________")
-    doc.add_paragraph("Data: _______/_______/_________")
-
-    # Nome do aluno tratado para nome de arquivo
-    nome_aluno = resultados[0]['nome']
-    nome_tratado = unicodedata.normalize('NFKD', nome_aluno).encode('ASCII', 'ignore').decode('utf-8')
-    nome_tratado = nome_tratado.replace(" ", "_").lower()
-
-    caminho = f"ocorrencia_{nome_tratado}.docx"
+    doc.add_paragraph("\nAssinatura do Responsável: ____________________________")
+    doc.add_paragraph("\nData: _______/_______/_________")
+    caminho = "relatorio_ocorrencias.docx"
     doc.save(caminho)
     return caminho
-
-from fpdf import FPDF
 
 def exportar_ocorrencias_para_pdf(resultados):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
-
     try:
         pdf.image("CABECARIOAPP.png", x=10, y=8, w=190)
     except:
         pass
-
     pdf.ln(35)
     pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
     pdf.set_font("Arial", size=12)
-
     for ocorr in resultados:
-        pdf.multi_cell(0, 8,
-            f"CGM: {ocorr['cgm']}\n"
-            f"Nome: {ocorr['nome']}\n"
-            f"Data: {ocorr['data']}\n"
-            f"Descrição: {ocorr['descricao']}\n"
-            f"Servidor: {ocorr.get('servidor', '')}"
-        )
+        pdf.multi_cell(0, 8, f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}")
         pdf.cell(0, 0, "-" * 70, ln=True)
         pdf.ln(5)
-
     pdf.ln(10)
     pdf.cell(0, 10, "Assinatura do Servidor: ____________________________", ln=True)
     pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
     pdf.cell(0, 10, "Data: ______/______/________", ln=True)
-
-    if len(resultados) == 1:
-        nome_arquivo = resultados[0]['nome'].replace(" ", "_").lower()
-    else:
-        nome_arquivo = "relatorio_varios_alunos"
-
-    caminho = f"{nome_arquivo}.pdf"
+    caminho = "relatorio_ocorrencias.pdf"
     pdf.output(caminho)
     return caminho
 
 # --- Login ---
 def pagina_login():
-    st.markdown("## 👤 Login de Usuário - V2.0 LSM")
+    st.markdown("## 👤 Login de Usuário")
     usuario = st.text_input("Usuário")
     senha = st.text_input("Senha", type="password")
     if st.button("Entrar"):
@@ -263,45 +213,8 @@ def pagina_cadastro():
 
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
-    st.markdown("## 🔍 Buscar, Editar ou Excluir Aluno")
-
-    busca_cgm = st.text_input("🔎 Buscar aluno pelo CGM")
-    if busca_cgm:
-        aluno = db.alunos.find_one({"cgm": busca_cgm})
-        if aluno:
-            st.write("👤 **Aluno encontrado:**")
-            with st.form("form_edicao"):
-                novo_nome = st.text_input("Nome", aluno.get("nome", ""))
-                nova_data = st.date_input("Data de Nascimento", pd.to_datetime(aluno.get("data")))
-                novo_telefone = st.text_input("Telefone", aluno.get("telefone", ""))
-                novo_responsavel = st.text_input("Responsável", aluno.get("responsavel", ""))
-                nova_turma = st.text_input("Turma", aluno.get("turma", ""))
-                col1, col2 = st.columns(2)
-                with col1:
-                    atualizar = st.form_submit_button("🔄 Atualizar")
-                with col2:
-                    excluir = st.form_submit_button("🗑️ Excluir")
-
-            if atualizar:
-                db.alunos.update_one({"cgm": busca_cgm}, {"$set": {
-                    "nome": novo_nome,
-                    "data": str(nova_data),
-                    "telefone": novo_telefone,
-                    "responsavel": novo_responsavel,
-                    "turma": nova_turma
-                }})
-                st.success("✅ Aluno atualizado com sucesso!")
-
-            if excluir:
-                db.alunos.delete_one({"cgm": busca_cgm})
-                st.warning("⚠️ Aluno excluído com sucesso!")
-
-        else:
-            st.error("❌ Aluno não encontrado com esse CGM.")
 
 # --- Registro de Ocorrência ---
-import unicodedata  # coloque este import no topo do seu arquivo, se ainda não estiver
-
 def pagina_ocorrencias():
     st.markdown("## 🚨 Registro de Ocorrência")
 
@@ -310,64 +223,38 @@ def pagina_ocorrencias():
 
     busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
 
-    aluno_encontrado = None
+    # Se o CGM for digitado, tenta encontrar aluno
     if busca_cgm:
-        for aluno in alunos_ordenados:
-            if str(aluno['cgm']) == str(busca_cgm):
-                aluno_encontrado = aluno
-                break
-
-    if aluno_encontrado:
-        st.text_input("👤 Nome do Aluno", value=aluno_encontrado.get('nome', ''), disabled=True)
-        st.text_input("📚 Turma", value=aluno_encontrado.get('turma', ''), disabled=True)
-        st.text_input("👨‍👩‍👧 Responsável", value=aluno_encontrado.get('responsavel', ''), disabled=True)
-        st.text_input("📞 Telefone", value=aluno_encontrado.get('telefone', ''), disabled=True)
-
-        descricao = st.text_area("📝 Descrição da Ocorrência")
-        servidor = st.text_input("👩‍🏫 Servidor Responsável")
-        if st.button("Salvar Ocorrência"):
-            nova_ocorrencia = {
-                "cgm": aluno_encontrado['cgm'],
-                "nome": aluno_encontrado['nome'],
-                "data": str(date.today()),
-                "descricao": descricao,
-                "servidor": servidor,
-                "telefone": aluno_encontrado.get('telefone', ''),
-                "turma": aluno_encontrado.get('turma', ''),
-                "responsavel": aluno_encontrado.get('responsavel', '')
-            }
-            db.ocorrencias.insert_one(nova_ocorrencia)
-            st.success("✅ Ocorrência registrada com sucesso!")
-
-        st.markdown("---")
-        st.markdown("## 📦 Exportar Ocorrências deste Aluno")
-
-        resultados = list(db.ocorrencias.find({"cgm": busca_cgm}))
-
-        if resultados:
-            nome_aluno = resultados[0].get("nome", "relatorio")
-            nome_tratado = unicodedata.normalize('NFKD', nome_aluno).encode('ASCII', 'ignore').decode('utf-8')
-            nome_tratado = nome_tratado.replace(" ", "_").lower()
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("📄 Gerar Word"):
-                    caminho = exportar_ocorrencias_para_word(resultados)
-                    with open(caminho, "rb") as f:
-                        st.download_button("📥 Baixar Word", f, file_name=f"ocorrencia_{nome_tratado}.docx")
-
-            with col2:
-                if st.button("🧾 Gerar PDF"):
-                    caminho = exportar_ocorrencias_para_pdf(resultados)
-                    with open(caminho, "rb") as f:
-                        st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencia_{nome_tratado}.pdf")
-
+        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
+        if aluno_cgm:
+            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
         else:
-            st.info("ℹ️ Nenhuma ocorrência registrada para esse aluno.")
+            st.warning("Nenhum aluno encontrado com esse CGM.")
+            return
+    else:
+        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]  # Adiciona item em branco
 
-    elif busca_cgm:
-        st.warning("⚠️ CGM não encontrado. Verifique se digitou corretamente.")
+    if nomes:
+        selecionado = st.selectbox("Selecione o aluno:", nomes)
+
+        if selecionado != "":
+            cgm = selecionado.split("CGM: ")[1].replace(")", "")
+            nome = selecionado.split(" (CGM:")[0]
+
+            descricao = st.text_area("Descrição da Ocorrência")
+            registrar = st.button("Registrar Ocorrência")
+
+            if registrar and descricao:
+                agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+                db.ocorrencias.insert_one({
+                    "cgm": cgm,
+                    "nome": nome,
+                    "telefone": telefone,
+                    "data": agora,
+                    "descricao": descricao
+                })
+                st.success("✅ Ocorrência registrada com sucesso!")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
@@ -381,45 +268,29 @@ def pagina_exportar():
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
         return
-import streamlit as st
+    # Exportar por CGM
+    st.subheader("🔍 Buscar por CGM")
+    cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
+    col1, col2 = st.columns(2)
+    if col1.button("📄 Gerar Word por CGM") and cgm_input:
+        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados)
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar Word", f, file_name="ocorrencias_cgm.docx")
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
+        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados)
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar PDF", f, file_name="ocorrencias_cgm.pdf")
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
-def pagina_ocorrencias():
-    st.markdown("## 🚨 Registro de Ocorrência")
 
-    alunos = list(db.alunos.find())
-    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
-
-    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
-
-    aluno_encontrado = None
-    if busca_cgm:
-        for aluno in alunos_ordenados:
-            if str(aluno['cgm']) == str(busca_cgm):
-                aluno_encontrado = aluno
-                break
-
-    if aluno_encontrado:
-        # Campo de retorno preenchido com o nome do aluno
-        st.text_input("👤 Nome do Aluno", value=aluno_encontrado['nome'], disabled=True)
-
-        # Aqui você pode continuar com os outros campos de ocorrência
-        descricao = st.text_area("📝 Descrição da Ocorrência")
-        servidor = st.text_input("👩‍🏫 Servidor Responsável")
-        if st.button("Salvar Ocorrência"):
-            nova_ocorrencia = {
-                "cgm": aluno_encontrado['cgm'],
-                "nome": aluno_encontrado['nome'],
-                "data": str(date.today()),
-                "descricao": descricao,
-                "servidor": servidor
-            }
-            db.ocorrencias.insert_one(nova_ocorrencia)
-            st.success("✅ Ocorrência registrada com sucesso!")
-
-    elif busca_cgm:
-        st.warning("⚠️ CGM não encontrado. Verifique se digitou corretamente.")
-
-    # --- Botões para exportar tudo ---
+ # --- Botões para exportar tudo ---
     st.subheader("📦 Exportar Todas as Ocorrências")
     if resultados:
         nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
@@ -489,12 +360,6 @@ def pagina_usuarios():
             st.success("✅ Usuário cadastrado com sucesso!")
         else:
             st.error("Preencha todos os campos.")
-# --- Botão de Sair ---
-def sair():
-    st.session_state["logado"] = False
-    st.session_state["usuario"] = ""
-    st.session_state["nivel"] = ""
-    st.rerun()
 
 # --- Menu Lateral ---
 def menu():
@@ -515,14 +380,12 @@ def menu():
         pagina_lista()
     elif pagina == "Usuários":
         pagina_usuarios()
-     
+
 # --- Execução ---
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
-elif st.sidebar.button("🚪 Sair do Sistema"):
-        sair()
+
 if not st.session_state["logado"]:
     pagina_login()
 else:
     menu()
-
