@@ -123,7 +123,7 @@ def exportar_ocorrencias_para_pdf(resultados):
 
 # --- Login ---
 def pagina_login():
-    st.markdown("## 👤 Login de Usuário")
+    st.markdown("## 👤 Login de Usuário - V2.0 LSM")
     usuario = st.text_input("Usuário")
     senha = st.text_input("Senha", type="password")
     if st.button("Entrar"):
