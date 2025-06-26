@@ -386,15 +386,12 @@ def menu():
         pagina_lista()
     elif pagina == "Usuários":
         pagina_usuarios()
-
-st.sidebar.markdown("---")
-    if st.sidebar.button("🚪 Sair do Sistema"):
-        sair()
-        
+     
 # --- Execução ---
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
-
+elif st.sidebar.button("🚪 Sair do Sistema"):
+        sair()
 if not st.session_state["logado"]:
     pagina_login()
 else:
