@@ -360,6 +360,12 @@ def pagina_usuarios():
             st.success("✅ Usuário cadastrado com sucesso!")
         else:
             st.error("Preencha todos os campos.")
+# --- Botão de Sair ---
+def sair():
+    st.session_state["logado"] = False
+    st.session_state["usuario"] = ""
+    st.session_state["nivel"] = ""
+    st.rerun()
 
 # --- Menu Lateral ---
 def menu():
@@ -381,6 +387,10 @@ def menu():
     elif pagina == "Usuários":
         pagina_usuarios()
 
+st.sidebar.markdown("---")
+    if st.sidebar.button("🚪 Sair do Sistema"):
+        sair()
+        
 # --- Execução ---
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
