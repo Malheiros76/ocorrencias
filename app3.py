@@ -29,7 +29,6 @@ st.markdown(f"""
 st.markdown("""
     <style>
         .stApp {
-            background-color: #f2f6fc;
             color: #333333;
             font-family: 'Segoe UI', sans-serif;
         }
@@ -40,7 +39,7 @@ st.markdown("""
             max-width: 1000px;
             margin: auto;
             padding: 2rem;
-            background-color: white;
+            background-color: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
             box-shadow: 2px 2px 15px rgba(0,0,0,0.1);
         }
@@ -67,7 +66,6 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-
 # --- Conexão com MongoDB ---
 @st.cache_resource
 def conectar():
