@@ -98,10 +98,11 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
 
 Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
-def exportar_ocorrencias_para_word(resultados):
-    from docx import Document
-    from docx.shared import Inches
+import unicodedata
+from docx import Document
+from docx.shared import Inches
 
+def exportar_ocorrencias_para_word(resultados):
     doc = Document()
     doc.add_picture("CABECARIOAPP.png", width=Inches(6))
     doc.add_heading("Relatório de Ocorrências", level=1)
@@ -120,12 +121,12 @@ def exportar_ocorrencias_para_word(resultados):
     doc.add_paragraph("Assinatura do Responsável: ____________________________")
     doc.add_paragraph("Data: _______/_______/_________")
 
-    if len(resultados) == 1:
-        nome_arquivo = resultados[0]['nome'].replace(" ", "_").lower()
-    else:
-        nome_arquivo = "relatorio_varios_alunos"
+    # Nome do aluno tratado para nome de arquivo
+    nome_aluno = resultados[0]['nome']
+    nome_tratado = unicodedata.normalize('NFKD', nome_aluno).encode('ASCII', 'ignore').decode('utf-8')
+    nome_tratado = nome_tratado.replace(" ", "_").lower()
 
-    caminho = f"{nome_arquivo}.docx"
+    caminho = f"ocorrencia_{nome_tratado}.docx"
     doc.save(caminho)
     return caminho
 
