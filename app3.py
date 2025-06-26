@@ -381,7 +381,7 @@ def pagina_exportar():
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
         return
-   import streamlit as st
+import streamlit as st
 
 def pagina_ocorrencias():
     st.markdown("## 🚨 Registro de Ocorrência")
