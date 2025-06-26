@@ -12,7 +12,7 @@ st.set_page_config(page_title="Sistema Escolar - 2.0 By Malheiros", layout="cent
 
 # --- Fundo com imagem base64 ---
 # Substitua a string abaixo com o conteúdo Base64 real da sua imagem de fundo
-fundo_base64 = "data:image/jpg;base64,INSIRA_O_BASE64_DA_SUA_IMAGEM_AQUI"
+fundo_base64 = "data:image/jpg;base64,harpia.png"
 
 st.markdown(f"""
     <style>
