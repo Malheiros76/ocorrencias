@@ -8,7 +8,7 @@ from fpdf import FPDF
 import pandas as pd
 import urllib.parse
 
-st.set_page_config(page_title="Sistema Escolar - MongoDB", layout="centered")
+st.set_page_config(page_title="Sistema Escolar - 2.0 By Malheiros", layout="centered")
 
 # --- Estilização Visual ---
 st.markdown("""
