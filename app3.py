@@ -385,7 +385,7 @@ def sair():
     st.session_state["logado"] = False
     st.session_state["usuario"] = ""
     st.session_state["nivel"] = ""
-    st.experimental_rerun()
+    st.rerun()
     
 # --- Execução ---
 if "logado" not in st.session_state:
@@ -394,6 +394,5 @@ if "logado" not in st.session_state:
 if not st.session_state["logado"]:
     pagina_login()
 elif st.sidebar.button("🚪 Sair do Sistema"):
-    sair()
-else:
+   else:
     menu()
