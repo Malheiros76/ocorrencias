@@ -300,6 +300,8 @@ def pagina_cadastro():
             st.error("❌ Aluno não encontrado com esse CGM.")
 
 # --- Registro de Ocorrência ---
+import unicodedata  # coloque este import no topo do seu arquivo, se ainda não estiver
+
 def pagina_ocorrencias():
     st.markdown("## 🚨 Registro de Ocorrência")
 
@@ -308,64 +310,64 @@ def pagina_ocorrencias():
 
     busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
 
-    # Se o CGM for digitado, tenta encontrar aluno
+    aluno_encontrado = None
     if busca_cgm:
-        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
-        if aluno_cgm:
-            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
+        for aluno in alunos_ordenados:
+            if str(aluno['cgm']) == str(busca_cgm):
+                aluno_encontrado = aluno
+                break
+
+    if aluno_encontrado:
+        st.text_input("👤 Nome do Aluno", value=aluno_encontrado.get('nome', ''), disabled=True)
+        st.text_input("📚 Turma", value=aluno_encontrado.get('turma', ''), disabled=True)
+        st.text_input("👨‍👩‍👧 Responsável", value=aluno_encontrado.get('responsavel', ''), disabled=True)
+        st.text_input("📞 Telefone", value=aluno_encontrado.get('telefone', ''), disabled=True)
+
+        descricao = st.text_area("📝 Descrição da Ocorrência")
+        servidor = st.text_input("👩‍🏫 Servidor Responsável")
+        if st.button("Salvar Ocorrência"):
+            nova_ocorrencia = {
+                "cgm": aluno_encontrado['cgm'],
+                "nome": aluno_encontrado['nome'],
+                "data": str(date.today()),
+                "descricao": descricao,
+                "servidor": servidor,
+                "telefone": aluno_encontrado.get('telefone', ''),
+                "turma": aluno_encontrado.get('turma', ''),
+                "responsavel": aluno_encontrado.get('responsavel', '')
+            }
+            db.ocorrencias.insert_one(nova_ocorrencia)
+            st.success("✅ Ocorrência registrada com sucesso!")
+
+        st.markdown("---")
+        st.markdown("## 📦 Exportar Ocorrências deste Aluno")
+
+        resultados = list(db.ocorrencias.find({"cgm": busca_cgm}))
+
+        if resultados:
+            nome_aluno = resultados[0].get("nome", "relatorio")
+            nome_tratado = unicodedata.normalize('NFKD', nome_aluno).encode('ASCII', 'ignore').decode('utf-8')
+            nome_tratado = nome_tratado.replace(" ", "_").lower()
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("📄 Gerar Word"):
+                    caminho = exportar_ocorrencias_para_word(resultados)
+                    with open(caminho, "rb") as f:
+                        st.download_button("📥 Baixar Word", f, file_name=f"ocorrencia_{nome_tratado}.docx")
+
+            with col2:
+                if st.button("🧾 Gerar PDF"):
+                    caminho = exportar_ocorrencias_para_pdf(resultados)
+                    with open(caminho, "rb") as f:
+                        st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencia_{nome_tratado}.pdf")
+
         else:
-            st.warning("Nenhum aluno encontrado com esse CGM.")
-            return
-    else:
-        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]  # Adiciona item em branco
+            st.info("ℹ️ Nenhuma ocorrência registrada para esse aluno.")
 
-    if nomes:
-        selecionado = st.selectbox("Selecione o aluno:", nomes)
-
-        if selecionado != "":
-            cgm = selecionado.split("CGM: ")[1].replace(")", "")
-            nome = selecionado.split(" (CGM:")[0]
-
-            descricao = st.text_area("Descrição da Ocorrência")
-            registrar = st.button("Registrar Ocorrência")
-
-            if registrar and descricao:
-                agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
-                db.ocorrencias.insert_one({
-                    "cgm": cgm,
-                    "nome": nome,
-                    "telefone": telefone,
-                    "data": agora,
-                    "descricao": descricao
-                })
-                st.success("✅ Ocorrência registrada com sucesso!")
-    st.markdown("---")
-    st.markdown("## ✏️ Editar ou Excluir Ocorrências")
-
-    if busca_cgm:
-        ocorrencias = list(db.ocorrencias.find({"cgm": busca_cgm}).sort("data", -1))
-
-        if ocorrencias:
-            for i, ocorrencia in enumerate(ocorrencias):
-                with st.expander(f"📌 Ocorrência em {ocorrencia['data']}"):
-                    nova_descricao = st.text_area("Descrição", ocorrencia['descricao'], key=f"desc_{i}")
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        if st.button("🔄 Atualizar", key=f"update_{i}"):
-                            db.ocorrencias.update_one(
-                                {"_id": ocorrencia["_id"]},
-                                {"$set": {"descricao": nova_descricao}}
-                            )
-                            st.success("✅ Ocorrência atualizada com sucesso!")
-                            st.experimental_rerun()
-                    with col2:
-                        if st.button("🗑️ Excluir", key=f"delete_{i}"):
-                            db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
-                            st.warning("⚠️ Ocorrência excluída com sucesso!")
-                            st.experimental_rerun()
-        else:
-            st.info("ℹ️ Nenhuma ocorrência registrada para esse CGM.")
+    elif busca_cgm:
+        st.warning("⚠️ CGM não encontrado. Verifique se digitou corretamente.")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
