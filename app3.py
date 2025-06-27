@@ -349,20 +349,23 @@ def pagina_lista():
 # --- Cadastro de Usuários ---
 def pagina_usuarios():
     st.markdown("## 👥 Cadastro de Usuários")
-    if st.session_state.get("nivel") != "admin":
-        st.warning("Apenas administradores podem cadastrar novos usuários.")
-        return
-    with st.form("form_usuarios"):
-        usuario = st.text_input("Novo usuário")
-        senha = st.text_input("Senha", type="password")
-        nivel = st.selectbox("Nível de acesso", ["user", "admin"])
-        cadastrar = st.form_submit_button("Cadastrar")
     if cadastrar:
-        if usuario and senha:
-            db.usuarios.insert_one({"usuario": usuario, "senha": senha, "nivel": nivel})
+    usuario = usuario.strip()
+    senha = senha.strip()
+    if usuario and senha:
+        try:
+            resultado = db.usuarios.insert_one({
+                "usuario": usuario,
+                "senha": senha,
+                "nivel": nivel
+            })
             st.success("✅ Usuário cadastrado com sucesso!")
-        else:
-            st.error("Preencha todos os campos.")
+            print("Usuário salvo com id:", resultado.inserted_id)
+        except Exception as e:
+            print("Erro ao salvar usuário:", e)
+            st.error(f"Erro ao salvar usuário: {e}")
+    else:
+        st.error("Preencha todos os campos.")
 
 # --- Menu Lateral ---
 def menu():
