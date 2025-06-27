@@ -361,24 +361,28 @@ def pagina_exportar():
             st.info("Mensagens individuais abaixo ⬇️")
 
     # Agrupamento por período
-    st.subheader("📅 Exportar Agrupado por Período")
-    data_inicio = st.date_input("Data inicial", key="data_inicio_export")
-    data_fim = st.date_input("Data final", key="data_fim_export")
+st.subheader("📅 Exportar Agrupado por Período")
 
-    if st.button("🔎 Gerar relatório agrupado"):
-        resultados_filtrados = list(db.ocorrencias.find({
-            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
-        }))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
-            with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+import uuid
+unique_id = str(uuid.uuid4())
 
-            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
-            with open(caminho_pdf, "rb") as f:
-                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
-        else:
-            st.warning("Nenhuma ocorrência no período informado.")
+data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
+data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
+
+if st.button("🔎 Gerar relatório agrupado"):
+    resultados_filtrados = list(db.ocorrencias.find({
+        "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+    }))
+    if resultados_filtrados:
+        caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+        with open(caminho, "rb") as f:
+            st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+
+        caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+        with open(caminho_pdf, "rb") as f:
+            st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+    else:
+        st.warning("Nenhuma ocorrência no período informado.")
 
     # Agrupar por aluno e exibir relatórios individuais
     ocorrencias_por_aluno = {}
