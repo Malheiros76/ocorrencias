@@ -432,16 +432,16 @@ if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
             # Botões exportação individual
-            col1, col2 = st.columns(2)
-            if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
-                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+           # col1, col2 = st.columns(2)
+            #if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
+             #   caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+              #  with open(caminho, "rb") as f:
+               #     st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
 
-            if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
-                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+            #if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
+             #   caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+              #  with open(caminho, "rb") as f:
+               #     st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
 
 # --- Lista de Alunos ---
 def pagina_lista():
