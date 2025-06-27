@@ -124,13 +124,22 @@ def exportar_ocorrencias_para_pdf(resultados):
     pdf.output(caminho)
     return caminho
 
+import streamlit as st
+import hashlib
+
 # --- Login ---
 def pagina_login():
-    st.markdown("## 👤 Login de Usuário - V2.0 LSM")
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+    st.markdown("## 👤 Login de Usuário - V2.0.2 LSM")
+    usuario = st.text_input("Usuário").strip()
+    senha = st.text_input("Senha", type="password").strip()
+
     if st.button("Entrar"):
-        user = db.usuarios.find_one({"usuario": usuario, "senha": senha})
+        senha_hash = hashlib.sha256(senha.encode()).hexdigest()
+        user = db.usuarios.find_one({
+            "usuario": usuario,
+            "senha": senha_hash
+        })
+
         if user:
             st.session_state["logado"] = True
             st.session_state["usuario"] = usuario
