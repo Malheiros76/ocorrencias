@@ -350,8 +350,8 @@ def pagina_lista():
 def pagina_usuarios():
     st.markdown("## 👥 Cadastro de Usuários")
     if cadastrar:
-    usuario = usuario.strip()
-    senha = senha.strip()
+        usuario = usuario.strip()
+        senha = senha.strip()
     if usuario and senha:
         try:
             resultado = db.usuarios.insert_one({
