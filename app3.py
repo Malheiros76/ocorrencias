@@ -88,42 +88,76 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
 
 Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
-def exportar_ocorrencias_para_word(resultados):
-    doc = Document()
-    doc.add_picture("CABECARIOAPP.png", width=Inches(6))
-    doc.add_heading("Relatório de Ocorrências", level=1)
-    for ocorr in resultados:
-        doc.add_paragraph(f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}\n----------------------")
-    doc.add_paragraph("\n\nAssinatura do Servidor: ____________________________")
-    doc.add_paragraph("\nAssinatura do Responsável: ____________________________")
-    doc.add_paragraph("\nData: _______/_______/_________")
-    caminho = "relatorio_ocorrencias.docx"
-    doc.save(caminho)
-    return caminho
+# --- Funções para exportar ---
+def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
+    from docx import Document
+    from docx.shared import Inches
 
-def exportar_ocorrencias_para_pdf(resultados):
+    doc = Document()
+
+    # Cabeçalho com imagem
+    try:
+        doc.add_picture("CABEÇARIOAPP.png", width=Inches(6.0))
+    except:
+        doc.add_heading("Relatório de Ocorrências", 0)
+
+    for ocorr in lista:
+        doc.add_paragraph(f"\nNome do Aluno: {ocorr.get('nome', '')}")
+        doc.add_paragraph(f"CGM: {ocorr.get('cgm', '')}")
+        doc.add_paragraph(f"Turma: {ocorr.get('turma', '')}")
+        doc.add_paragraph(f"Telefone: {ocorr.get('telefone', '')}")
+        doc.add_paragraph(f"Data da Ocorrência: {ocorr.get('data', '')}")
+        doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
+        doc.add_paragraph("-" * 50)
+
+    doc.add_paragraph("\n\n" + "_" * 30 + "                      " + "_" * 30)
+    doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
+
+    doc.save(filename)
+    return filename
+
+
+def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
+    from fpdf import FPDF
+    import os
+
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
-    try:
-        pdf.image("CABECARIOAPP.png", x=10, y=8, w=190)
-    except:
-        pass
-    pdf.ln(35)
-    pdf.cell(0, 10, "Relatório de Ocorrências", ln=True, align='C')
-    pdf.set_font("Arial", size=12)
-    for ocorr in resultados:
-        pdf.multi_cell(0, 8, f"CGM: {ocorr['cgm']}\nNome: {ocorr['nome']}\nData: {ocorr['data']}\nDescrição: {ocorr['descricao']}\nServidor: {ocorr.get('servidor', '')}")
-        pdf.cell(0, 0, "-" * 70, ln=True)
-        pdf.ln(5)
-    pdf.ln(10)
-    pdf.cell(0, 10, "Assinatura do Servidor: ____________________________", ln=True)
-    pdf.cell(0, 10, "Assinatura do Responsável: _________________________", ln=True)
-    pdf.cell(0, 10, "Data: ______/______/________", ln=True)
-    caminho = "relatorio_ocorrencias.pdf"
-    pdf.output(caminho)
-    return caminho
+    pdf.set_auto_page_break(auto=True, margin=15)
 
+    # Cabeçalho com imagem
+    if os.path.exists("CABEÇARIOAPP.png"):
+        pdf.image("CABEÇARIOAPP.png", x=10, y=8, w=190)
+        pdf.ln(35)
+    else:
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt="Relatório de Ocorrências", ln=True, align='C')
+
+    pdf.set_font("Arial", size=12)
+
+    for ocorr in lista:
+        pdf.ln(10)
+        pdf.set_font("Arial", 'B', 12)
+        pdf.cell(0, 10, f"Aluno: {ocorr.get('nome', '')}", ln=True)
+        pdf.set_font("Arial", size=11)
+        pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
+        pdf.cell(0, 10, f"Turma: {ocorr.get('turma', '')}", ln=True)
+        pdf.cell(0, 10, f"Telefone: {ocorr.get('telefone', '')}", ln=True)
+        pdf.cell(0, 10, f"Data: {ocorr.get('data', '')}", ln=True)
+        pdf.multi_cell(0, 10, f"Descrição: {ocorr.get('descricao', '')}")
+        pdf.cell(0, 10, "-" * 70, ln=True)
+
+    pdf.ln(20)
+    pdf.cell(90, 10, "_________________________", 0, 0, "C")
+    pdf.cell(10)
+    pdf.cell(90, 10, "_________________________", 0, 1, "C")
+    pdf.cell(90, 10, "Funcionário", 0, 0, "C")
+    pdf.cell(10)
+    pdf.cell(90, 10, "Responsável", 0, 1, "C")
+
+    pdf.output(filename)
+    return filename
+    
 import streamlit as st
 import hashlib
 
@@ -273,6 +307,7 @@ def pagina_exportar():
     import os
     import urllib
     from docx import Document
+    from docx.shared import Inches
     from fpdf import FPDF
     from datetime import datetime
 
@@ -324,6 +359,61 @@ def pagina_exportar():
 
         with col3:
             st.info("Mensagens individuais abaixo ⬇️")
+
+    # Agrupamento por período
+    st.subheader("📅 Exportar Agrupado por Período")
+    data_inicio = st.date_input("Data inicial")
+    data_fim = st.date_input("Data final")
+
+    if st.button("🔎 Gerar relatório agrupado"):
+        resultados_filtrados = list(db.ocorrencias.find({
+            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+        }))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+
+            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+            with open(caminho_pdf, "rb") as f:
+                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+        else:
+            st.warning("Nenhuma ocorrência no período informado.")
+
+    # Agrupar por aluno e exibir relatórios individuais
+    ocorrencias_por_aluno = {}
+    for ocorr in resultados:
+        nome = ocorr.get("nome", "")
+        if nome not in ocorrencias_por_aluno:
+            ocorrencias_por_aluno[nome] = []
+        ocorrencias_por_aluno[nome].append(ocorr)
+
+    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+        with st.expander(f"📄 Relatório de {nome}"):
+            telefone = lista[0].get("telefone", "")
+            for ocorr in lista:
+                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
+
+            mensagem = formatar_mensagem_whatsapp(lista, nome)
+            st.text_area("📋 WhatsApp", mensagem, height=200)
+
+            if telefone:
+                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+                st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            # Botões exportação individual
+            col1, col2 = st.columns(2)
+
+            if col1.button(f"📄 Gerar DOCX - {nome}"):
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+
+            if col2.button(f"🧾 Gerar PDF - {nome}"):
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
 
     # Agrupamento por período
     st.subheader("📅 Exportar Agrupado por Período")
