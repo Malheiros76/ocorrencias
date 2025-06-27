@@ -362,8 +362,8 @@ def pagina_exportar():
 
     # Agrupamento por período
     st.subheader("📅 Exportar Agrupado por Período")
-    data_inicio = st.date_input("Data inicial")
-    data_fim = st.date_input("Data final")
+    data_inicio = st.date_input("Data inicial", key="data_inicio_export")
+    data_fim = st.date_input("Data final", key="data_fim_export")
 
     if st.button("🔎 Gerar relatório agrupado"):
         resultados_filtrados = list(db.ocorrencias.find({
