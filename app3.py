@@ -8,7 +8,7 @@ from fpdf import FPDF
 import pandas as pd
 import urllib.parse
 
-st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros ", layout="centered")
+st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.2 ", layout="centered")
 
 # --- Estilização Visual ---
 st.markdown("""
