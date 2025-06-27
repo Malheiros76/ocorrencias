@@ -7,6 +7,7 @@ from docx.shared import Inches
 from fpdf import FPDF
 import pandas as pd
 import urllib.parse
+import uuid
 
 st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.2 ", layout="centered")
 
