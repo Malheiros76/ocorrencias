@@ -349,23 +349,23 @@ def pagina_lista():
 # --- Cadastro de Usuários ---
 def pagina_usuarios():
     st.markdown("## 👥 Cadastro de Usuários")
-    if cadastrar:
-        usuario = usuario.strip()
-        senha = senha.strip()
-    if usuario and senha:
-        try:
-            resultado = db.usuarios.insert_one({
-                "usuario": usuario,
-                "senha": senha,
-                "nivel": nivel
-            })
-            st.success("✅ Usuário cadastrado com sucesso!")
-            print("Usuário salvo com id:", resultado.inserted_id)
-        except Exception as e:
-            print("Erro ao salvar usuário:", e)
-            st.error(f"Erro ao salvar usuário: {e}")
-    else:
-        st.error("Preencha todos os campos.")
+        if cadastrar:
+            usuario = usuario.strip()
+            senha = senha.strip()
+        if usuario and senha:
+            try:
+                resultado = db.usuarios.insert_one({
+                    "usuario": usuario,
+                    "senha": senha,
+                    "nivel": nivel
+                })
+                st.success("✅ Usuário cadastrado com sucesso!")
+                print("Usuário salvo com id:", resultado.inserted_id)
+            except Exception as e:
+                print("Erro ao salvar usuário:", e)
+                st.error(f"Erro ao salvar usuário: {e}")
+        else:
+            st.error("Preencha todos os campos.")
 
 # --- Menu Lateral ---
 def menu():
