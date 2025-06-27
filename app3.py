@@ -62,6 +62,9 @@ def conectar():
 
 db = conectar()
 
+print("--- Coleções no banco 'escola' ---")
+print(db.list_collection_names())
+
 # --- Funções auxiliares ---
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
