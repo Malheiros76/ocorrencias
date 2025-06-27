@@ -270,9 +270,11 @@ def pagina_ocorrencias():
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
+    import os
+    import urllib
     from docx import Document
-    from docx.shared import Inches
     from fpdf import FPDF
+    from datetime import datetime
 
     st.markdown("## 📥 Exportar Relatórios")
     resultados = list(db.ocorrencias.find({}, {"_id": 0}))
@@ -280,6 +282,7 @@ def pagina_exportar():
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
         return
+
     # Exportar por CGM
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
@@ -287,22 +290,21 @@ def pagina_exportar():
     if col1.button("📄 Gerar Word por CGM") and cgm_input:
         resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
         if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_word(resultados_filtrados)
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.docx")
             with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar Word", f, file_name="ocorrencias_cgm.docx")
+                st.download_button("📥 Baixar Word", f, file_name=f"ocorrencias_cgm_{cgm_input}.docx")
         else:
             st.warning("Nenhuma ocorrência encontrada para este CGM.")
     if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
         resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
         if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados)
+            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.pdf")
             with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar PDF", f, file_name="ocorrencias_cgm.pdf")
+                st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencias_cgm_{cgm_input}.pdf")
         else:
             st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
-
- # --- Botões para exportar tudo ---
+    # Exportar todas as ocorrências
     st.subheader("📦 Exportar Todas as Ocorrências")
     if resultados:
         nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
@@ -310,20 +312,40 @@ def pagina_exportar():
 
         with col1:
             if st.button("📄 Gerar Word"):
-                caminho = exportar_ocorrencias_para_word(resultados)
+                caminho = exportar_ocorrencias_para_word(resultados, f"{nome_primeiro}_ALL.docx")
                 with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar Word", f, file_name=f"{nome_primeiro}.docx")
+                    st.download_button("📥 Baixar Word", f, file_name=f"{nome_primeiro}_ALL.docx")
 
         with col2:
             if st.button("🧾 Gerar PDF"):
-                caminho = exportar_ocorrencias_para_pdf(resultados)
+                caminho = exportar_ocorrencias_para_pdf(resultados, f"{nome_primeiro}_ALL.pdf")
                 with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=f"{nome_primeiro}.pdf")
+                    st.download_button("📥 Baixar PDF", f, file_name=f"{nome_primeiro}_ALL.pdf")
+
         with col3:
-               st.info("Mensagens individuais abaixo ⬇️")
+            st.info("Mensagens individuais abaixo ⬇️")
 
+    # Agrupamento por período
+    st.subheader("📅 Exportar Agrupado por Período")
+    data_inicio = st.date_input("Data inicial")
+    data_fim = st.date_input("Data final")
 
-    # Agrupar por aluno e exibir relatórios com WhatsApp
+    if st.button("🔎 Gerar relatório agrupado"):
+        resultados_filtrados = list(db.ocorrencias.find({
+            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+        }))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+
+            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+            with open(caminho_pdf, "rb") as f:
+                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+        else:
+            st.warning("Nenhuma ocorrência no período informado.")
+
+    # Agrupar por aluno e exibir relatórios individuais
     ocorrencias_por_aluno = {}
     for ocorr in resultados:
         nome = ocorr.get("nome", "")
@@ -337,6 +359,7 @@ def pagina_exportar():
             for ocorr in lista:
                 st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
 
+            # Mensagem WhatsApp
             mensagem = formatar_mensagem_whatsapp(lista, nome)
             st.text_area("📋 WhatsApp", mensagem, height=200)
 
@@ -344,6 +367,54 @@ def pagina_exportar():
                 numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            # Botões exportação individual
+            col1, col2 = st.columns(2)
+
+            if col1.button(f"📄 Gerar DOCX - {nome}"):
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+
+            if col2.button(f"🧾 Gerar PDF - {nome}"):
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+
+# --- Funções para exportar ---
+def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
+    from docx import Document
+    doc = Document()
+    doc.add_heading('Relatório de Ocorrências', 0)
+
+    for ocorr in lista:
+        doc.add_heading(ocorr.get('nome', 'SEM NOME'), level=1)
+        doc.add_paragraph(f"Data: {ocorr.get('data', '')}")
+        doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
+        doc.add_paragraph("-" * 30)
+
+    doc.save(filename)
+    return filename
+
+def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
+    from fpdf import FPDF
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(0, 10, txt="Relatório de Ocorrências", ln=True, align='C')
+
+    for ocorr in lista:
+        pdf.ln(10)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, ocorr.get('nome', 'SEM NOME'), ln=True)
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, 10, f"Data: {ocorr.get('data', '')}")
+        pdf.multi_cell(0, 10, f"Descrição: {ocorr.get('descricao', '')}")
+        pdf.multi_cell(0, 10, "-" * 30)
+
+    pdf.output(filename)
+    return filename
 
 # --- Lista de Alunos ---
 def pagina_lista():
