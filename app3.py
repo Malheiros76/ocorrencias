@@ -97,7 +97,7 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
 
     # Cabeçalho com imagem
     try:
-        doc.add_picture("CABEÇARIOAPP.png", width=Inches(6.0))
+        doc.add_picture("CABECARIOAPP.png", width=Inches(6.0))
     except:
         doc.add_heading("Relatório de Ocorrências", 0)
 
@@ -126,8 +126,8 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
     pdf.set_auto_page_break(auto=True, margin=15)
 
     # Cabeçalho com imagem
-    if os.path.exists("CABEÇARIOAPP.png"):
-        pdf.image("CABEÇARIOAPP.png", x=10, y=8, w=190)
+    if os.path.exists("CABECARIOAPP.png"):
+        pdf.image("CABECARIOAPP.png", x=10, y=8, w=190)
         pdf.ln(35)
     else:
         pdf.set_font("Arial", 'B', 16)
