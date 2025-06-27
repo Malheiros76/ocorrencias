@@ -347,16 +347,42 @@ def pagina_lista():
         st.info("Nenhum aluno cadastrado.")
 
 # --- Cadastro de Usuários ---
+import streamlit as st
+from pymongo import MongoClient
+import hashlib
+
+def conectar():
+    uri = "mongodb+srv://bibliotecaluizcarlos:KAUOQ9ViyKrXDDAl@cluster0.npyoxsi.mongodb.net/?retryWrites=true&w=majority"
+    cliente = MongoClient(uri)
+    return cliente["escola"]
+
+db = conectar()
+
+# --- Cadastro de Usuários ---
 def pagina_usuarios():
     st.markdown("## 👥 Cadastro de Usuários")
-        if cadastrar:
-            usuario = usuario.strip()
-            senha = senha.strip()
+    
+    # Exemplo de segurança: só admin pode cadastrar
+    if st.session_state.get("nivel") != "admin":
+        st.warning("Apenas administradores podem cadastrar novos usuários.")
+        return
+
+    # Formulário de cadastro
+    with st.form("form_usuarios"):
+        usuario = st.text_input("Novo usuário")
+        senha = st.text_input("Senha", type="password")
+        nivel = st.selectbox("Nível de acesso", ["user", "admin"])
+        cadastrar = st.form_submit_button("Cadastrar")
+
+    if cadastrar:
+        usuario = usuario.strip()
+        senha = senha.strip()
         if usuario and senha:
+            senha_hash = hashlib.sha256(senha.encode()).hexdigest()
             try:
                 resultado = db.usuarios.insert_one({
                     "usuario": usuario,
-                    "senha": senha,
+                    "senha": senha_hash,
                     "nivel": nivel
                 })
                 st.success("✅ Usuário cadastrado com sucesso!")
@@ -366,6 +392,14 @@ def pagina_usuarios():
                 st.error(f"Erro ao salvar usuário: {e}")
         else:
             st.error("Preencha todos os campos.")
+
+    if st.button("👀 Ver Usuários Salvos"):
+        usuarios = list(db.usuarios.find())
+        if usuarios:
+            for u in usuarios:
+                st.write(u)
+        else:
+            st.info("Nenhum usuário cadastrado ainda.")
 
 # --- Menu Lateral ---
 def menu():
