@@ -365,51 +365,26 @@ def pagina_exportar():
         with col3:
             st.info("Mensagens individuais abaixo ⬇️")
 
-    # Agrupamento por período (corrigido)
-    # Agrupamento por período (corrigido!)
-st.subheader("📅 Exportar Agrupado por Período")
+   st.subheader("📅 Exportar Agrupado por Período")
 
-unique_id = str(uuid.uuid4())
-data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
-data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
+    unique_id = str(uuid.uuid4())
+    data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
+    data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
 
-if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
+    if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
+        resultados_filtrados = list(db.ocorrencias.find({
+            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+        }))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
 
-    inicio_str = data_inicio.strftime("%Y-%m-%d")
-    fim_str = data_fim.strftime("%Y-%m-%d")
-
-    # Cria pipeline para extrair apenas a parte YYYY-MM-DD da data
-    pipeline = [
-        {
-            "$addFields": {
-                "data_somente": {
-                    "$substr": ["$data", 0, 10]
-                }
-            }
-        },
-        {
-            "$match": {
-                "data_somente": {
-                    "$gte": inicio_str,
-                    "$lte": fim_str
-                }
-            }
-        }
-    ]
-
-    resultados_filtrados = list(db.ocorrencias.aggregate(pipeline))
-
-    if resultados_filtrados:
-        caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
-        with open(caminho, "rb") as f:
-            st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
-
-        caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
-        with open(caminho_pdf, "rb") as f:
-            st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
-    else:
-        st.warning("Nenhuma ocorrência no período informado.")
-
+            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+            with open(caminho_pdf, "rb") as f:
+                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+        else:
+            st.warning("Nenhuma ocorrência no período informado.")
     # Agrupar por aluno e exibir relatórios individuais
     ocorrencias_por_aluno = {}
     for ocorr in resultados:
