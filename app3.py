@@ -9,7 +9,7 @@ import pandas as pd
 import urllib.parse
 import uuid
 
-st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.2 ", layout="centered")
+st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.3 ", layout="centered")
 
 # --- Estilização Visual ---
 st.markdown("""
@@ -164,7 +164,7 @@ import hashlib
 
 # --- Login ---
 def pagina_login():
-    st.markdown("## 👤 Login de Usuário - V2.0.2 LSM")
+    st.markdown("## 👤 Login de Usuário - V2.0.3 LSM")
     usuario = st.text_input("Usuário").strip()
     senha = st.text_input("Senha", type="password").strip()
 
