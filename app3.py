@@ -77,74 +77,16 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
-        try:
-            # Tenta ler data com segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # Se falhar, lê sem segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
-
-        data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
-        msg += f"""
-🔸 Ocorrência {i}
-📅 Data: {data_formatada}
-📝 Descrição: {ocorr['descricao']}
--------------------------"""
-
-    msg += """
-
-👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
-📞 Contato: [41 3348-4165]
-
-Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
-    return msg
-from datetime import datetime
-
-def formatar_mensagem_whatsapp(ocorrencias, nome):
-    msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
-👤 Aluno: {nome}
-📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
-==============================\n"""
-
-    for i, ocorr in enumerate(ocorrencias, start=1):
-        try:
-            # Tenta ler data com segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # Se falhar, lê sem segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
-
-        data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
-        msg += f"""
-🔸 Ocorrência {i}
-📅 Data: {data_formatada}
-📝 Descrição: {ocorr['descricao']}
--------------------------"""
-
-    msg += """
-
-👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
-📞 Contato: [41 3348-4165]
-
-Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
-    return msg
-from datetime import datetime
-
-def formatar_mensagem_whatsapp(ocorrencias, nome):
-    msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
-👤 Aluno: {nome}
-📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
-==============================\n"""
-
-    for i, ocorr in enumerate(ocorrencias, start=1):
-        try:
-            # Tenta ler data com segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            # Se falhar, lê sem segundos
-            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
-
-        data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
+        data_txt = ocorr.get("data", "")
+        data_formatada = data_txt
+        if data_txt:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+                try:
+                    data_obj = datetime.strptime(data_txt, fmt)
+                    data_formatada = data_obj.strftime("%d/%m/%Y às %H:%M")
+                    break
+                except ValueError:
+                    continue
         msg += f"""
 🔸 Ocorrência {i}
 📅 Data: {data_formatada}
@@ -616,41 +558,73 @@ def pagina_ocorrencias():
 
     busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
 
-    # Se o CGM for digitado, tenta encontrar aluno
     if busca_cgm:
-        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
-        if aluno_cgm:
-            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
+        aluno = db.alunos.find_one({"cgm": busca_cgm})
+        if aluno:
+            nome = aluno["nome"]
+            telefone = aluno.get("telefone", "")
         else:
-            st.warning("Nenhum aluno encontrado com esse CGM.")
-            return
+            nome = ""
+            telefone = ""
     else:
-        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]  # Adiciona item em branco
+        nome = ""
+        telefone = ""
 
-    if nomes:
-        selecionado = st.selectbox("Selecione o aluno:", nomes)
+    cgm = busca_cgm
+    descricao = st.text_area("✏️ Descreva a Ocorrência:")
+    registrar = st.button("✅ Registrar Ocorrência")
 
-        if selecionado != "":
-            cgm = selecionado.split("CGM: ")[1].replace(")", "")
-            nome = selecionado.split(" (CGM:")[0]
+    if registrar and descricao:
+        tz = pytz.timezone("America/Sao_Paulo")
+        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
-            descricao = st.text_area("Descrição da Ocorrência")
-            registrar = st.button("Registrar Ocorrência")
+        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+        db.ocorrencias.insert_one({
+            "cgm": cgm,
+            "nome": nome,
+            "telefone": telefone,
+            "data": agora,
+            "descricao": descricao
+        })
+        st.success("✅ Ocorrência registrada com sucesso!")
+# --- Registro de Ocorrência ---
+def pagina_ocorrencias():
+    st.markdown("## 🚨 Registro de Ocorrência")
 
-            if registrar and descricao:
-                # Pega horário de Brasília
-                tz = pytz.timezone("America/Sao_Paulo")
-                agora = datetime.now(tz).strftime("%D-%M=%Y %H:%M:%S")
+    alunos = list(db.alunos.find())
+    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
 
-                telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
-                db.ocorrencias.insert_one({
-                    "cgm": cgm,
-                    "nome": nome,
-                    "telefone": telefone,
-                    "data": agora,
-                    "descricao": descricao
-                })
-                st.success("✅ Ocorrência registrada com sucesso!")
+    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
+
+    if busca_cgm:
+        aluno = db.alunos.find_one({"cgm": busca_cgm})
+        if aluno:
+            nome = aluno["nome"]
+            telefone = aluno.get("telefone", "")
+        else:
+            nome = ""
+            telefone = ""
+    else:
+        nome = ""
+        telefone = ""
+
+    cgm = busca_cgm
+    descricao = st.text_area("✏️ Descreva a Ocorrência:")
+    registrar = st.button("✅ Registrar Ocorrência")
+
+    if registrar and descricao:
+        tz = pytz.timezone("America/Sao_Paulo")
+        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+
+        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+        db.ocorrencias.insert_one({
+            "cgm": cgm,
+            "nome": nome,
+            "telefone": telefone,
+            "data": agora,
+            "descricao": descricao
+        })
+        st.success("✅ Ocorrência registrada com sucesso!")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
