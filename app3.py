@@ -68,28 +68,97 @@ print("--- Coleções no banco 'escola' ---")
 print(db.list_collection_names())
 
 # --- Funções auxiliares ---
+from datetime import datetime
+
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
 📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
 ==============================\n"""
+
     for i, ocorr in enumerate(ocorrencias, start=1):
         try:
+            # Tenta ler data com segundos
             data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
-        except:
+        except ValueError:
+            # Se falhar, lê sem segundos
             data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
+
         data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
         msg += f"""
 🔸 Ocorrência {i}
 📅 Data: {data_formatada}
-📝 Descrição: {ocorr['descricao']}\n-------------------------"""
+📝 Descrição: {ocorr['descricao']}
+-------------------------"""
+
     msg += """
 
-👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza ]
+👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
 📞 Contato: [41 3348-4165]
 
 Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
+from datetime import datetime
+
+def formatar_mensagem_whatsapp(ocorrencias, nome):
+    msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
+👤 Aluno: {nome}
+📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+==============================\n"""
+
+    for i, ocorr in enumerate(ocorrencias, start=1):
+        try:
+            # Tenta ler data com segundos
+            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # Se falhar, lê sem segundos
+            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
+
+        data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
+        msg += f"""
+🔸 Ocorrência {i}
+📅 Data: {data_formatada}
+📝 Descrição: {ocorr['descricao']}
+-------------------------"""
+
+    msg += """
+
+👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
+📞 Contato: [41 3348-4165]
+
+Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
+    return msg
+from datetime import datetime
+
+def formatar_mensagem_whatsapp(ocorrencias, nome):
+    msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
+👤 Aluno: {nome}
+📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+==============================\n"""
+
+    for i, ocorr in enumerate(ocorrencias, start=1):
+        try:
+            # Tenta ler data com segundos
+            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # Se falhar, lê sem segundos
+            data_obj = datetime.strptime(ocorr["data"], "%Y-%m-%d %H:%M")
+
+        data_formatada = data_obj.strftime('%d/%m/%Y às %H:%M')
+        msg += f"""
+🔸 Ocorrência {i}
+📅 Data: {data_formatada}
+📝 Descrição: {ocorr['descricao']}
+-------------------------"""
+
+    msg += """
+
+👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
+📞 Contato: [41 3348-4165]
+
+Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
+    return msg
+
 # --- Funções para exportar ---
 def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
     from docx import Document
