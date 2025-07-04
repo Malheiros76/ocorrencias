@@ -9,7 +9,6 @@ import pandas as pd
 import urllib.parse
 import uuid
 import pytz
-import hashlib
 
 st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.3 ", layout="centered")
 
@@ -69,6 +68,8 @@ print("--- Coleções no banco 'escola' ---")
 print(db.list_collection_names())
 
 # --- Funções auxiliares ---
+from datetime import datetime
+
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
@@ -169,6 +170,9 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
 
     pdf.output(filename)
     return filename
+    
+import streamlit as st
+import hashlib
 
 # --- Login ---
 def pagina_login():
@@ -278,39 +282,274 @@ def pagina_cadastro():
                     try:
                         cgm = str(row.get('cgm', '')).strip()
                         nome = str(row.get('nome', '')).strip()
-                        data_nasc = row.get('data', datetime.now().strftime("%Y-%m-%d"))
+                        data = str(row.get('data', '')).strip()
                         telefone = str(row.get('telefone', '')).strip()
                         responsavel = str(row.get('responsavel', '')).strip()
                         turma = str(row.get('turma', '')).strip()
 
                         if not cgm or not nome:
-                            erros.append(f"Linha {_+2}: CGM ou Nome vazio.")
+                            erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
                             continue
 
-                        db.alunos.update_one({"cgm": cgm}, {
-                            "$set": {
-                                "cgm": cgm,
-                                "nome": nome,
-                                "data": str(data_nasc),
-                                "telefone": telefone,
-                                "responsavel": responsavel,
-                                "turma": turma
-                            }
-                        }, upsert=True)
-                        total_importados += 1
-                    except Exception as e:
-                        erros.append(f"Linha {_+2}: {str(e)}")
+                        aluno = {
+                            "cgm": cgm,
+                            "nome": nome,
+                            "data": data,
+                            "telefone": telefone,
+                            "responsavel": responsavel,
+                            "turma": turma
+                        }
 
-                st.success(f"Importação finalizada: {total_importados} registros importados.")
+                        db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
+                        total_importados += 1
+
+                    except Exception as e:
+                        erros.append(f"Erro na linha {row.to_dict()} → {e}")
+
+                st.success(f"✅ Importação finalizada. Total importado/atualizado: {total_importados}")
                 if erros:
-                    st.error("Ocorreram erros:")
-                    for e in erros:
-                        st.write(e)
+                    st.warning("⚠️ Erros encontrados:")
+                    for erro in erros:
+                        st.error(erro)
 
         except Exception as e:
-            st.error(f"Erro ao ler arquivo: {e}")
+            st.error(f"Erro ao ler o arquivo: {e}")
+def pagina_cadastro():
+    st.markdown("## ✏️ Cadastro de Alunos")
 
-# --- Registro de Ocorrências ---
+    # --- Lista de alunos cadastrados ---
+    alunos = list(db.alunos.find().sort("nome", 1))
+
+    nomes_exibicao = [""] + [
+        f"{a['nome']} (CGM: {a['cgm']})"
+        for a in alunos
+    ]
+
+    selecionado = st.selectbox("🔎 Buscar aluno para Alterar ou Excluir:", nomes_exibicao)
+
+    aluno_carregado = None
+    if selecionado and selecionado != "":
+        # Extrai CGM do texto selecionado
+        cgm_busca = selecionado.split("CGM:")[1].replace(")", "").strip()
+        aluno_carregado = db.alunos.find_one({"cgm": cgm_busca})
+
+        st.success(f"Aluno carregado: {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})")
+
+    # --- Formulário de Cadastro ou Alteração ---
+    with st.form("form_cadastro"):
+
+        cgm = st.text_input("CGM", value=aluno_carregado["cgm"] if aluno_carregado else "")
+        nome = st.text_input("Nome", value=aluno_carregado["nome"] if aluno_carregado else "")
+        data = st.date_input("Data de Nascimento",
+                             value=pd.to_datetime(aluno_carregado["data"]).date()
+                             if aluno_carregado and aluno_carregado.get("data") else datetime.now().date())
+        telefone = st.text_input("Telefone", value=aluno_carregado["telefone"] if aluno_carregado else "")
+        responsavel = st.text_input("Responsável", value=aluno_carregado["responsavel"] if aluno_carregado else "")
+        turma = st.text_input("Turma", value=aluno_carregado["turma"] if aluno_carregado else "")
+
+        col1, col2, col3 = st.columns([1,1,1])
+        salvar = col1.form_submit_button("💾 Salvar / Alterar")
+        excluir = col2.form_submit_button("🗑️ Excluir")
+        limpar = col3.form_submit_button("🧹 Limpar")
+
+    # --- Ações após clique ---
+    if salvar:
+        if cgm and nome:
+            db.alunos.update_one({"cgm": cgm}, {
+                "$set": {
+                    "cgm": cgm,
+                    "nome": nome,
+                    "data": str(data),
+                    "telefone": telefone,
+                    "responsavel": responsavel,
+                    "turma": turma
+                }
+            }, upsert=True)
+            st.success("✅ Aluno salvo ou atualizado com sucesso!")
+            st.experimental_rerun()
+        else:
+            st.error("Preencha todos os campos obrigatórios.")
+
+    if excluir and aluno_carregado:
+        confirmacao = st.warning(f"Tem certeza que deseja excluir o aluno {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})?")
+        if st.button("✅ Confirmar Exclusão"):
+            db.alunos.delete_one({"cgm": aluno_carregado["cgm"]})
+            st.success("✅ Aluno excluído com sucesso!")
+            st.experimental_rerun()
+
+    if limpar:
+        st.experimental_rerun()
+
+    # --- Importação de alunos via arquivo ---
+    st.subheader("📥 Importar Alunos via TXT ou CSV")
+    arquivo = st.file_uploader("Escolha o arquivo .txt ou .csv", type=["txt", "csv"])
+    delimitador = st.selectbox("Escolha o delimitador", [";", ",", "\\t"])
+    delimitador_real = {";": ";", ",": ",", "\\t": "\t"}[delimitador]
+
+    if arquivo is not None:
+        try:
+            df_import = pd.read_csv(arquivo, delimiter=delimitador_real)
+            df_import.columns = [col.strip().lower() for col in df_import.columns]
+            st.dataframe(df_import)
+
+            if st.button("Importar para o Sistema"):
+                erros = []
+                total_importados = 0
+                for _, row in df_import.iterrows():
+                    try:
+                        cgm = str(row.get('cgm', '')).strip()
+                        nome = str(row.get('nome', '')).strip()
+                        data = str(row.get('data', '')).strip()
+                        telefone = str(row.get('telefone', '')).strip()
+                        responsavel = str(row.get('responsavel', '')).strip()
+                        turma = str(row.get('turma', '')).strip()
+
+                        if not cgm or not nome:
+                            erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
+                            continue
+
+                        aluno = {
+                            "cgm": cgm,
+                            "nome": nome,
+                            "data": data,
+                            "telefone": telefone,
+                            "responsavel": responsavel,
+                            "turma": turma
+                        }
+
+                        db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
+                        total_importados += 1
+
+                    except Exception as e:
+                        erros.append(f"Erro na linha {row.to_dict()} → {e}")
+
+                st.success(f"✅ Importação finalizada. Total importado/atualizado: {total_importados}")
+                if erros:
+                    st.warning("⚠️ Erros encontrados:")
+                    for erro in erros:
+                        st.error(erro)
+
+        except Exception as e:
+            st.error(f"Erro ao ler o arquivo: {e}")
+def pagina_cadastro():
+    st.markdown("## ✏️ Cadastro de Alunos")
+
+    # --- Lista de alunos cadastrados ---
+    alunos = list(db.alunos.find().sort("nome", 1))
+
+    nomes_exibicao = [""] + [
+        f"{a['nome']} (CGM: {a['cgm']})"
+        for a in alunos
+    ]
+
+    selecionado = st.selectbox("🔎 Buscar aluno para Alterar ou Excluir:", nomes_exibicao)
+
+    aluno_carregado = None
+    if selecionado and selecionado != "":
+        # Extrai CGM do texto selecionado
+        cgm_busca = selecionado.split("CGM:")[1].replace(")", "").strip()
+        aluno_carregado = db.alunos.find_one({"cgm": cgm_busca})
+
+        st.success(f"Aluno carregado: {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})")
+
+    # --- Formulário de Cadastro ou Alteração ---
+    with st.form("form_cadastro"):
+
+        cgm = st.text_input("CGM", value=aluno_carregado["cgm"] if aluno_carregado else "")
+        nome = st.text_input("Nome", value=aluno_carregado["nome"] if aluno_carregado else "")
+        data = st.date_input("Data de Nascimento",
+                             value=pd.to_datetime(aluno_carregado["data"]).date()
+                             if aluno_carregado and aluno_carregado.get("data") else datetime.now().date())
+        telefone = st.text_input("Telefone", value=aluno_carregado["telefone"] if aluno_carregado else "")
+        responsavel = st.text_input("Responsável", value=aluno_carregado["responsavel"] if aluno_carregado else "")
+        turma = st.text_input("Turma", value=aluno_carregado["turma"] if aluno_carregado else "")
+
+        col1, col2, col3 = st.columns([1,1,1])
+        salvar = col1.form_submit_button("💾 Salvar / Alterar")
+        excluir = col2.form_submit_button("🗑️ Excluir")
+        limpar = col3.form_submit_button("🧹 Limpar")
+
+    # --- Ações após clique ---
+    if salvar:
+        if cgm and nome:
+            db.alunos.update_one({"cgm": cgm}, {
+                "$set": {
+                    "cgm": cgm,
+                    "nome": nome,
+                    "data": str(data),
+                    "telefone": telefone,
+                    "responsavel": responsavel,
+                    "turma": turma
+                }
+            }, upsert=True)
+            st.success("✅ Aluno salvo ou atualizado com sucesso!")
+            st.rerun()
+        else:
+            st.error("Preencha todos os campos obrigatórios.")
+
+    if excluir and aluno_carregado:
+        confirmacao = st.warning(f"Tem certeza que deseja excluir o aluno {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})?")
+        if st.button("✅ Confirmar Exclusão"):
+            db.alunos.delete_one({"cgm": aluno_carregado["cgm"]})
+            st.success("✅ Aluno excluído com sucesso!")
+            st.experimental_rerun()
+
+    if limpar:
+        st.experimental_rerun()
+
+    # --- Importação de alunos via arquivo ---
+    st.subheader("📥 Importar Alunos via TXT ou CSV")
+    arquivo = st.file_uploader("Escolha o arquivo .txt ou .csv", type=["txt", "csv"])
+    delimitador = st.selectbox("Escolha o delimitador", [";", ",", "\\t"])
+    delimitador_real = {";": ";", ",": ",", "\\t": "\t"}[delimitador]
+
+    if arquivo is not None:
+        try:
+            df_import = pd.read_csv(arquivo, delimiter=delimitador_real)
+            df_import.columns = [col.strip().lower() for col in df_import.columns]
+            st.dataframe(df_import)
+
+            if st.button("Importar para o Sistema"):
+                erros = []
+                total_importados = 0
+                for _, row in df_import.iterrows():
+                    try:
+                        cgm = str(row.get('cgm', '')).strip()
+                        nome = str(row.get('nome', '')).strip()
+                        data = str(row.get('data', '')).strip()
+                        telefone = str(row.get('telefone', '')).strip()
+                        responsavel = str(row.get('responsavel', '')).strip()
+                        turma = str(row.get('turma', '')).strip()
+
+                        if not cgm or not nome:
+                            erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
+                            continue
+
+                        aluno = {
+                            "cgm": cgm,
+                            "nome": nome,
+                            "data": data,
+                            "telefone": telefone,
+                            "responsavel": responsavel,
+                            "turma": turma
+                        }
+
+                        db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
+                        total_importados += 1
+
+                    except Exception as e:
+                        erros.append(f"Erro na linha {row.to_dict()} → {e}")
+
+                st.success(f"✅ Importação finalizada. Total importado/atualizado: {total_importados}")
+                if erros:
+                    st.warning("⚠️ Erros encontrados:")
+                    for erro in erros:
+                        st.error(erro)
+
+        except Exception as e:
+            st.error(f"Erro ao ler o arquivo: {e}")
+
+# --- Registro de Ocorrência ---
 def pagina_ocorrencias():
     st.markdown("## 🚨 Registro de Ocorrência")
 
@@ -319,167 +558,292 @@ def pagina_ocorrencias():
 
     busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
 
-    aluno_selecionado = None
     if busca_cgm:
-        for a in alunos_ordenados:
-            if a['cgm'] == busca_cgm:
-                aluno_selecionado = a
-                break
-
-    if aluno_selecionado:
-        st.success(f"Aluno: {aluno_selecionado['nome']} (CGM {aluno_selecionado['cgm']})")
-
-        descricao = st.text_area("Descreva a ocorrência")
-        data_ocorrencia = st.date_input("Data da Ocorrência", value=datetime.now())
-        hora_ocorrencia = st.time_input("Hora da Ocorrência", value=datetime.now().time())
-
-        if st.button("Salvar Ocorrência"):
-            if descricao.strip() == "":
-                st.error("Descrição da ocorrência não pode ficar vazia.")
-            else:
-                dt_string = datetime.combine(data_ocorrencia, hora_ocorrencia).strftime("%Y-%m-%d %H:%M:%S")
-                nova_ocorrencia = {
-                    "aluno_id": aluno_selecionado.get("_id"),
-                    "nome": aluno_selecionado.get("nome"),
-                    "cgm": aluno_selecionado.get("cgm"),
-                    "data": dt_string,
-                    "descricao": descricao,
-                    "turma": aluno_selecionado.get("turma", ""),
-                    "telefone": aluno_selecionado.get("telefone", ""),
-                    "responsavel": aluno_selecionado.get("responsavel", "")
-                }
-                db.ocorrencias.insert_one(nova_ocorrencia)
-                st.success("Ocorrência salva com sucesso!")
-
-                # Exibir mensagem para WhatsApp
-                msg = formatar_mensagem_whatsapp([nova_ocorrencia], aluno_selecionado.get("nome"))
-                st.text_area("Mensagem para WhatsApp:", value=msg, height=200)
-
-    else:
-        st.info("Digite um CGM válido para buscar o aluno.")
-
-# --- Consulta Ocorrências por CGM - NOVA ABA ---
-def pagina_consulta_ocorrencias():
-    st.markdown("## 🔍 Consulta de Ocorrências por CGM")
-
-    cgm_consulta = st.text_input("Digite o CGM do aluno")
-
-    if cgm_consulta:
-        ocorrencias = list(db.ocorrencias.find({"cgm": cgm_consulta}).sort("data", -1))
-
-        if not ocorrencias:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+        aluno = db.alunos.find_one({"cgm": busca_cgm})
+        if aluno:
+            nome = aluno["nome"]
+            telefone = aluno.get("telefone", "")
         else:
-            nome_aluno = ocorrencias[0].get("nome", "Nome não encontrado")
-            st.success(f"Exibindo ocorrências para: {nome_aluno} (CGM {cgm_consulta})")
+            nome = ""
+            telefone = ""
+    else:
+        nome = ""
+        telefone = ""
 
-            for i, ocorr in enumerate(ocorrencias, start=1):
-                st.markdown(f"### Ocorrência {i}")
-                st.write(f"**Data:** {ocorr.get('data', '')}")
-                st.write(f"**Descrição:** {ocorr.get('descricao', '')}")
-                st.write("---")
+    cgm = busca_cgm
+    descricao = st.text_area("✏️ Descreva a Ocorrência:")
+    registrar = st.button("✅ Registrar Ocorrência")
 
-            # Exportação de ocorrências
-            st.markdown("### Exportar ocorrências")
+    if registrar and descricao:
+        tz = pytz.timezone("America/Sao_Paulo")
+        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Exportar para Word"):
-                    filename = f"relatorio_{cgm_consulta}.docx"
-                    exportar_ocorrencias_para_word(ocorrencias, filename)
-                    with open(filename, "rb") as file:
-                        st.download_button("Clique para baixar o arquivo Word", data=file, file_name=filename, mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+        db.ocorrencias.insert_one({
+            "cgm": cgm,
+            "nome": nome,
+            "telefone": telefone,
+            "data": agora,
+            "descricao": descricao
+        })
+        st.success("✅ Ocorrência registrada com sucesso!")
+# --- Registro de Ocorrência ---
+def pagina_ocorrencias():
+    st.markdown("## 🚨 Registro de Ocorrência")
 
-            with col2:
-                if st.button("Exportar para PDF"):
-                    filename = f"relatorio_{cgm_consulta}.pdf"
-                    exportar_ocorrencias_para_pdf(ocorrencias, filename)
-                    with open(filename, "rb") as file:
-                        st.download_button("Clique para baixar o arquivo PDF", data=file, file_name=filename, mime="application/pdf")
+    alunos = list(db.alunos.find())
+    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
 
-            with col3:
-                msg_whatsapp = formatar_mensagem_whatsapp(ocorrencias, nome_aluno)
-                st.text_area("Mensagem para WhatsApp", value=msg_whatsapp, height=200)
+    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
+
+    if busca_cgm:
+        aluno = db.alunos.find_one({"cgm": busca_cgm})
+        if aluno:
+            nome = aluno["nome"]
+            telefone = aluno.get("telefone", "")
+        else:
+            nome = ""
+            telefone = ""
+    else:
+        nome = ""
+        telefone = ""
+
+    cgm = busca_cgm
+    descricao = st.text_area("✏️ Descreva a Ocorrência:")
+    registrar = st.button("✅ Registrar Ocorrência")
+
+    if registrar and descricao:
+        tz = pytz.timezone("America/Sao_Paulo")
+        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+
+        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+        db.ocorrencias.insert_one({
+            "cgm": cgm,
+            "nome": nome,
+            "telefone": telefone,
+            "data": agora,
+            "descricao": descricao
+        })
+        st.success("✅ Ocorrência registrada com sucesso!")
+
+# --- Exportar Relatórios ---
+def pagina_exportar():
+    import os
+    import urllib
+    import uuid
+    from docx import Document
+    from docx.shared import Inches
+    from fpdf import FPDF
+    from datetime import datetime
+
+    st.markdown("## 📥 Exportar Relatórios")
+
+    resultados = list(db.ocorrencias.find({}, {"_id": 0}))
+
+    if not resultados:
+        st.warning("Nenhuma ocorrência encontrada.")
+        return
+
+    # Exportar por CGM
+    st.subheader("🔍 Buscar por CGM")
+    cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
+    col1, col2 = st.columns(2)
+
+    if col1.button("📄 Gerar Word por CGM", key="btn_word_cgm") and cgm_input:
+        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.docx")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar Word", f, file_name=f"ocorrencias_cgm_{cgm_input}.docx")
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    if col2.button("🧾 Gerar PDF por CGM", key="btn_pdf_cgm") and cgm_input:
+        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.pdf")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencias_cgm_{cgm_input}.pdf")
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    # Exportar todas as ocorrências
+    st.subheader("📦 Exportar Todas as Ocorrências")
+    if resultados:
+        nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            if st.button("📄 Gerar Word", key="btn_word_all"):
+                caminho = exportar_ocorrencias_para_word(resultados, f"{nome_primeiro}_ALL.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar Word", f, file_name=f"{nome_primeiro}_ALL.docx")
+
+        with col2:
+            if st.button("🧾 Gerar PDF", key="btn_pdf_all"):
+                caminho = exportar_ocorrencias_para_pdf(resultados, f"{nome_primeiro}_ALL.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar PDF", f, file_name=f"{nome_primeiro}_ALL.pdf")
+
+        with col3:
+            st.info("Mensagens individuais abaixo ⬇️")
+
+    # Agrupamento por período (corrigido)
+    st.subheader("📅 Exportar Agrupado por Período")
+
+    unique_id = str(uuid.uuid4())
+    data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
+    data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
+
+    if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
+        resultados_filtrados = list(db.ocorrencias.find({
+            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+        }))
+        if resultados_filtrados:
+            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+            with open(caminho, "rb") as f:
+                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+
+            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+            with open(caminho_pdf, "rb") as f:
+                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+        else:
+            st.warning("Nenhuma ocorrência no período informado.")
+
+    # Agrupar por aluno e exibir relatórios individuais
+    ocorrencias_por_aluno = {}
+    for ocorr in resultados:
+        nome = ocorr.get("nome", "")
+        if nome not in ocorrencias_por_aluno:
+            ocorrencias_por_aluno[nome] = []
+        ocorrencias_por_aluno[nome].append(ocorr)
+
+    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+        with st.expander(f"📄 Relatório de {nome}"):
+            telefone = lista[0].get("telefone", "")
+            for ocorr in lista:
+                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
+
+            mensagem = formatar_mensagem_whatsapp(lista, nome)
+            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"txt_msg_{nome}")
+
+            if telefone:
+                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+                st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            # Botões exportação individual
+            col1, col2 = st.columns(2)
+            if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+
+            if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+
+# --- Lista de Alunos ---
+def pagina_lista():
+    st.markdown("## 📄 Lista de Alunos")
+    dados = list(db.alunos.find({}, {"_id": 0}))
+    if dados:
+        df = pd.DataFrame(dados)
+        st.dataframe(df.sort_values("nome"))
+    else:
+        st.info("Nenhum aluno cadastrado.")
 
 # --- Cadastro de Usuários ---
-def pagina_cadastro_usuarios():
-    st.markdown("## 👨‍💻 Cadastro e Gerenciamento de Usuários")
+import streamlit as st
+from pymongo import MongoClient
+import hashlib
 
-    usuarios = list(db.usuarios.find())
-    usuarios_ordenados = sorted(usuarios, key=lambda x: x['usuario'])
+def conectar():
+    uri = "mongodb+srv://bibliotecaluizcarlos:KAUOQ9ViyKrXDDAl@cluster0.npyoxsi.mongodb.net/?retryWrites=true&w=majority"
+    cliente = MongoClient(uri)
+    return cliente["escola"]
 
-    usuario_selecionado = st.selectbox("Selecionar usuário para alterar/excluir", [""] + [u["usuario"] for u in usuarios_ordenados])
+db = conectar()
 
-    usuario_atual = None
-    if usuario_selecionado:
-        usuario_atual = db.usuarios.find_one({"usuario": usuario_selecionado})
+# --- Cadastro de Usuários ---
+def pagina_usuarios():
+    st.markdown("## 👥 Cadastro de Usuários")
+    
+    # Exemplo de segurança: só admin pode cadastrar
+    if st.session_state.get("nivel") != "admin":
+        st.warning("Apenas administradores podem cadastrar novos usuários.")
+        return
 
-    with st.form("form_usuario"):
-        usuario = st.text_input("Usuário", value=usuario_atual["usuario"] if usuario_atual else "")
-        senha = st.text_input("Senha (deixe em branco para não alterar)", type="password")
-        nivel = st.selectbox("Nível de Acesso", options=["admin", "user"], index=0 if not usuario_atual else (0 if usuario_atual.get("nivel", "user") == "admin" else 1))
+    # Formulário de cadastro
+    with st.form("form_usuarios"):
+        usuario = st.text_input("Novo usuário")
+        senha = st.text_input("Senha", type="password")
+        nivel = st.selectbox("Nível de acesso", ["user", "admin"])
+        cadastrar = st.form_submit_button("Cadastrar")
 
-        salvar = st.form_submit_button("Salvar / Alterar")
-        excluir = st.form_submit_button("Excluir")
-        limpar = st.form_submit_button("Limpar")
-
-    if salvar:
-        if usuario:
-            senha_hash = usuario_atual.get("senha") if (usuario_atual and senha.strip() == "") else hashlib.sha256(senha.encode()).hexdigest()
-            db.usuarios.update_one({"usuario": usuario}, {"$set": {"usuario": usuario, "senha": senha_hash, "nivel": nivel}}, upsert=True)
-            st.success("Usuário salvo ou alterado com sucesso!")
-            st.experimental_rerun()
+    if cadastrar:
+        usuario = usuario.strip()
+        senha = senha.strip()
+        if usuario and senha:
+            senha_hash = hashlib.sha256(senha.encode()).hexdigest()
+            try:
+                resultado = db.usuarios.insert_one({
+                    "usuario": usuario,
+                    "senha": senha_hash,
+                    "nivel": nivel
+                })
+                st.success("✅ Usuário cadastrado com sucesso!")
+                print("Usuário salvo com id:", resultado.inserted_id)
+            except Exception as e:
+                print("Erro ao salvar usuário:", e)
+                st.error(f"Erro ao salvar usuário: {e}")
         else:
-            st.error("Usuário não pode ficar vazio.")
+            st.error("Preencha todos os campos.")
 
-    if excluir and usuario_atual:
-        db.usuarios.delete_one({"usuario": usuario_atual["usuario"]})
-        st.success("Usuário excluído com sucesso!")
-        st.experimental_rerun()
+    if st.button("👀 Ver Usuários Salvos"):
+        usuarios = list(db.usuarios.find())
+        if usuarios:
+            for u in usuarios:
+                st.write(u)
+        else:
+            st.info("Nenhum usuário cadastrado ainda.")
 
-    if limpar:
-        st.experimental_rerun()
+# --- Menu Lateral ---
+def menu():
+    st.sidebar.image("BRASÃO.png", use_container_width=True)
+    st.sidebar.markdown("### 📚 Menu de Navegação")
+    opcoes = ["Cadastro", "Ocorrências", "Exportar", "Lista"]
+    if st.session_state.get("nivel") == "admin":
+        opcoes.append("Usuários")
+    pagina = st.sidebar.selectbox("Escolha a aba:", opcoes)
 
-# --- Função para logout ---
-def logout():
+    if pagina == "Cadastro":
+        pagina_cadastro()
+    elif pagina == "Ocorrências":
+        pagina_ocorrencias()
+    elif pagina == "Exportar":
+        pagina_exportar()
+    elif pagina == "Lista":
+        pagina_lista()
+    elif pagina == "Usuários":
+        pagina_usuarios()
+
+def sair():
     st.session_state["logado"] = False
     st.session_state["usuario"] = ""
     st.session_state["nivel"] = ""
-
-# --- Menu principal ---
-def menu():
-    st.sidebar.title(f"Bem-vindo, {st.session_state['usuario']}")
-
-    menu = st.sidebar.radio("Menu", [
-        "Registro de Ocorrências",
-        "Consulta Ocorrências",
-        "Cadastro de Alunos",
-        "Cadastro de Usuários",
-        "Sair"
-    ])
-
-    if menu == "Registro de Ocorrências":
-        pagina_ocorrencias()
-    elif menu == "Consulta Ocorrências":
-        pagina_consulta_ocorrencias()
-    elif menu == "Cadastro de Alunos":
-        pagina_cadastro()
-    elif menu == "Cadastro de Usuários":
-        if st.session_state["nivel"] == "admin":
-            pagina_cadastro_usuarios()
-        else:
-            st.warning("Você não tem permissão para acessar esta área.")
-    elif menu == "Sair":
-        logout()
-        st.experimental_rerun()
-
+    st.rerun()
+    
 # --- Execução ---
 if "logado" not in st.session_state:
     st.session_state["logado"] = False
-    st.session_state["usuario"] = ""
-    st.session_state["nivel"] = ""
 
 if not st.session_state["logado"]:
     pagina_login()
 else:
-    menu()
+    if st.sidebar.button("🚪 Sair do Sistema"):
+        sair()
+    else:
+        menu()
+
