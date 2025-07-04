@@ -56,7 +56,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def agora_local():
-    tz = pytz.timezone("America/Sao_Paulo")
+    tz = pytz.timezone("America/Buenos_Aires")
     return datetime.now(tz)
     
 # --- Conexão com MongoDB ---
