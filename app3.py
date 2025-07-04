@@ -318,6 +318,7 @@ def pagina_cadastro():
 
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
+
 def pagina_cadastro():
     st.markdown("## ✏️ Cadastro de Alunos")
 
@@ -435,6 +436,7 @@ def pagina_cadastro():
 
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
+
 def pagina_cadastro():
     st.markdown("## ✏️ Cadastro de Alunos")
 
@@ -562,34 +564,38 @@ def pagina_ocorrencias():
 
     busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
 
+    # Se o CGM for digitado, tenta encontrar aluno
     if busca_cgm:
-        aluno = db.alunos.find_one({"cgm": busca_cgm})
-        if aluno:
-            nome = aluno["nome"]
-            telefone = aluno.get("telefone", "")
+        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
+        if aluno_cgm:
+            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
         else:
-            nome = ""
-            telefone = ""
+            st.warning("Nenhum aluno encontrado com esse CGM.")
+            return
     else:
-        nome = ""
-        telefone = ""
+        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]  # Adiciona item em branco
 
-    cgm = busca_cgm
-    descricao = st.text_area("✏️ Descreva a Ocorrência:")
-    registrar = st.button("✅ Registrar Ocorrência")
+    if nomes:
+        selecionado = st.selectbox("Selecione o aluno:", nomes)
 
-    if registrar and descricao:
-        agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
+        if selecionado != "":
+            cgm = selecionado.split("CGM: ")[1].replace(")", "")
+            nome = selecionado.split(" (CGM:")[0]
 
-        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
-        db.ocorrencias.insert_one({
-            "cgm": cgm,
-            "nome": nome,
-            "telefone": telefone,
-            "data": agora,
-            "descricao": descricao
-        })
-        st.success("✅ Ocorrência registrada com sucesso!")
+            descricao = st.text_area("Descrição da Ocorrência")
+            registrar = st.button("Registrar Ocorrência")
+
+            if registrar and descricao:
+                agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+                db.ocorrencias.insert_one({
+                    "cgm": cgm,
+                    "nome": nome,
+                    "telefone": telefone,
+                    "data": agora,
+                    "descricao": descricao
+                })
+                st.success("✅ Ocorrência registrada com sucesso!")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
