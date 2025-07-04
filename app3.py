@@ -77,17 +77,17 @@ from datetime import datetime
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
-📅 Data do Relatório: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+📅 Data do Relatório: {datetime.now().strftime('%d/%m/%y às %H:%M')}
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
         data_txt = ocorr.get("data", "")
         data_formatada = data_txt
         if data_txt:
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+            for fmt in ("%d-%m-%Y %H:%M:%S", "%d-%m-%Y %H:%M"):
                 try:
                     data_obj = datetime.strptime(data_txt, fmt)
-                    data_formatada = data_obj.strftime("%d/%m/%Y às %H:%M")
+                    data_formatada = data_obj.strftime("%Y/%m/%d às %H:%M")
                     break
                 except ValueError:
                     continue
