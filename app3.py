@@ -590,44 +590,6 @@ def pagina_ocorrencias():
             "descricao": descricao
         })
         st.success("✅ Ocorrência registrada com sucesso!")
-# --- Registro de Ocorrência ---
-def pagina_ocorrencias():
-    st.markdown("## 🚨 Registro de Ocorrência")
-
-    alunos = list(db.alunos.find())
-    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
-
-    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
-
-    if busca_cgm:
-        aluno = db.alunos.find_one({"cgm": busca_cgm})
-        if aluno:
-            nome = aluno["nome"]
-            telefone = aluno.get("telefone", "")
-        else:
-            nome = ""
-            telefone = ""
-    else:
-        nome = ""
-        telefone = ""
-
-    cgm = busca_cgm
-    descricao = st.text_area("✏️ Descreva a Ocorrência:")
-    registrar = st.button("✅ Registrar Ocorrência")
-
-    if registrar and descricao:
-        tz = pytz.timezone("America/Sao_Paulo")
-        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-
-        telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
-        db.ocorrencias.insert_one({
-            "cgm": cgm,
-            "nome": nome,
-            "telefone": telefone,
-            "data": agora,
-            "descricao": descricao
-        })
-        st.success("✅ Ocorrência registrada com sucesso!")
 
 # --- Exportar Relatórios ---
 def pagina_exportar():
