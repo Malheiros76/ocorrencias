@@ -579,8 +579,7 @@ def pagina_ocorrencias():
     registrar = st.button("✅ Registrar Ocorrência")
 
     if registrar and descricao:
-        tz = pytz.timezone("America/Sao_Paulo")
-         agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
+        agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
 
         telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
         db.ocorrencias.insert_one({
