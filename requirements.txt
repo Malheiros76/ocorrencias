@@ -6,3 +6,4 @@ fpdf
 pillow
 reportlab
 fpdf2
+pytz
