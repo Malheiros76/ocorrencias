@@ -571,7 +571,7 @@ def pagina_ocorrencias():
             if registrar and descricao:
                 # Pega horário de Brasília
                 tz = pytz.timezone("America/Sao_Paulo")
-                agora = datetime.now(tz).strftime("%D-%M=%Y ""%Y-%m-%d %H:%M:%S")
+                agora = datetime.now(tz).strftime("%D-%M=%Y %H:%M:%S")
 
                 telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
                 db.ocorrencias.insert_one({
