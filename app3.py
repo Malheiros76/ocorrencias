@@ -55,6 +55,10 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+def agora_local():
+    tz = pytz.timezone("America/Sao_Paulo")
+    return datetime.now(tz)
+    
 # --- Conexão com MongoDB ---
 @st.cache_resource
 def conectar():
@@ -576,7 +580,7 @@ def pagina_ocorrencias():
 
     if registrar and descricao:
         tz = pytz.timezone("America/Sao_Paulo")
-        agora = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+         agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
 
         telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
         db.ocorrencias.insert_one({
