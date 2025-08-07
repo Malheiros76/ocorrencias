@@ -75,9 +75,12 @@ print(db.list_collection_names())
 from datetime import datetime
 
 def formatar_mensagem_whatsapp(ocorrencias, nome):
+    fuso_brasilia = pytz.timezone("America/Sao_Paulo")
+    agora = datetime.now(fuso_brasilia)
+
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
-📅 Data do Relatório: {datetime.now().strftime('%d/%m/%y às %H:%M')}
+📅 Data do Relatório: {agora.strftime('%d/%m/%y às %H:%M')}
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
@@ -94,15 +97,8 @@ def formatar_mensagem_whatsapp(ocorrencias, nome):
         msg += f"""
 🔸 Ocorrência {i}
 📅 Data: {data_formatada}
-📝 Descrição: {ocorr['descricao']}
--------------------------"""
+📝 Descrição: {ocorr['descricao']}"""
 
-    msg += """
-
-👨‍🏫 Escola [CCM Profº Luiz Carlos de Paula e Souza]
-📞 Contato: [41 3348-4165]
-
-Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
 
 # --- Funções para exportar ---
