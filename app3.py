@@ -77,7 +77,7 @@ from datetime import datetime
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
-📅 Data do Relatório: {agora.strftime('%d/%m/%y às %H:%M')}
+📅 Data do Relatório: {datetime.now().strftime('%d/%m/%y às %H:%M')}
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
