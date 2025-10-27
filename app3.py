@@ -158,7 +158,6 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
 
     class PDF(FPDF):
         def header(self):
-            # Cabeçalho com imagem ou título
             if os.path.exists("CABECARIOAPP.png"):
                 self.image("CABECARIOAPP.png", x=10, y=8, w=190)
                 self.ln(35)
@@ -168,7 +167,6 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
                 self.ln(5)
 
         def footer(self):
-            # Rodapé institucional
             self.set_y(-15)
             self.set_font("Arial", "I", 8)
             self.set_text_color(100)
@@ -179,20 +177,27 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.set_font("Arial", size=11)
 
-    # --- Cabeçalho informativo ---
+    # Cabeçalho informativo
     data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 10, f"Gerado em: {data_geracao} | Total de ocorrências: {total}", ln=True, align="C")
     pdf.ln(5)
 
-    # --- Ocorrências individuais ---
+    # Listagem das ocorrências
     for ocorr in lista:
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"ID (Banco): {str(ocorr.get('_id', ''))}", ln=True)
+        # Conversão segura do ID
+        _id = ocorr.get("_id", "")
+        try:
+            _id = str(_id)
+        except Exception:
+            _id = ""
 
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"Aluno: {ocorr.get('nome', '')}", ln=True)
+        pdf.cell(0, 10, f"ID (Banco): {_id}", ln=True)
+
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, f"Nome do Aluno: {ocorr.get('nome', '')}", ln=True)
         pdf.set_font("Arial", size=11)
         pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
         pdf.cell(0, 10, f"Turma: {ocorr.get('turma', '')}", ln=True)
@@ -202,7 +207,7 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
         pdf.cell(0, 10, "-" * 80, ln=True)
         pdf.ln(3)
 
-    # --- Rodapé de assinaturas ---
+    # Rodapé de assinaturas
     pdf.ln(15)
     pdf.cell(90, 10, "_________________________", 0, 0, "C")
     pdf.cell(10)
@@ -213,7 +218,6 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
 
     pdf.output(filename)
     return filename
-
     
 import streamlit as st
 import hashlib
