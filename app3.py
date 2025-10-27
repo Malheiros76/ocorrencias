@@ -703,7 +703,7 @@ def pagina_exportar():
 
     st.markdown("## 📥 Exportar Relatórios")
 
-    resultados = list(db.ocorrencias.find({}, {"_id": 0}))
+    resultados = list(db.ocorrencias.find({}))
 
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
