@@ -58,9 +58,6 @@ st.markdown("""
 def agora_local():
     tz = pytz.timezone("America/Sao_Paulo")
     return datetime.now(tz)
-
-    # Define o fuso horário do Brasil (São Paulo)
-    fuso = pytz.timezone('America/Sao_Paulo')
     
 # --- Conexão com MongoDB ---
 @st.cache_resource
@@ -80,8 +77,7 @@ from datetime import datetime
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
-📅 Data do Relatório:=datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
-print(data_geracao)
+📅 Data do Relatório:datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
