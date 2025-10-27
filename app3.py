@@ -108,18 +108,29 @@ Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
 # --- Funções para exportar ---
 def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
     from docx import Document
-    from docx.shared import Inches
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from datetime import datetime
 
     doc = Document()
 
-    # Cabeçalho com imagem
+    # Cabeçalho com imagem ou título
     try:
         doc.add_picture("CABECARIOAPP.png", width=Inches(6.0))
     except:
-        doc.add_heading("Relatório de Ocorrências", 0)
+        titulo = doc.add_heading("Relatório de Ocorrências", 0)
+        titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+    # --- Informações do relatório ---
+    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    total = len(lista)
+    doc.add_paragraph(f"Gerado em: {data_geracao} | Total de ocorrências: {total}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("")  # Linha em branco
+
+    # --- Ocorrências individuais ---
     for ocorr in lista:
-        doc.add_paragraph(f"\nNome do Aluno: {ocorr.get('nome', '')}")
+        doc.add_paragraph(f"ID (Banco): {str(ocorr.get('_id', ''))}")
+        doc.add_paragraph(f"Nome do Aluno: {ocorr.get('nome', '')}")
         doc.add_paragraph(f"CGM: {ocorr.get('cgm', '')}")
         doc.add_paragraph(f"Turma: {ocorr.get('turma', '')}")
         doc.add_paragraph(f"Telefone: {ocorr.get('telefone', '')}")
@@ -127,12 +138,18 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
         doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
         doc.add_paragraph("-" * 50)
 
+    # --- Rodapé de assinatura ---
     doc.add_paragraph("\n\n" + "_" * 30 + "                      " + "_" * 30)
-    doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
+    ass = doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
+    ass.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # --- Rodapé institucional opcional ---
+    rodape = doc.add_paragraph("\nSistema Escolar - Relatório gerado automaticamente")
+    rodape.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    rodape.runs[0].font.size = Pt(8)
 
     doc.save(filename)
     return filename
-
 
 def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
     from fpdf import FPDF
