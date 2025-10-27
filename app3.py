@@ -151,7 +151,7 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
     doc.save(filename)
     return filename
 
-def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
+def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf", usuario="Sistema"):
     from fpdf import FPDF
     from datetime import datetime
     import os
@@ -159,9 +159,12 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
     class PDF(FPDF):
         def header(self):
             if os.path.exists("CABECARIOAPP.png"):
+                # Cabeçalho com imagem
                 self.image("CABECARIOAPP.png", x=10, y=8, w=190)
-                self.ln(35)
+                # Desce o cursor ~60px para não sobrepor o texto
+                self.set_y(68)
             else:
+                # Cabeçalho de fallback (sem imagem)
                 self.set_font("Arial", "B", 16)
                 self.cell(0, 10, "Relatório de Ocorrências", ln=True, align="C")
                 self.ln(5)
@@ -177,26 +180,27 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.set_font("Arial", size=11)
 
-    # Cabeçalho informativo
+    # 📅 Cabeçalho informativo
     data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 10, f"Gerado em: {data_geracao} | Total de ocorrências: {total}", ln=True, align="C")
-    pdf.ln(5)
+    pdf.cell(0, 10, f"Gerado em: {data_geracao}", ln=True, align="C")
+    pdf.cell(0, 10, f"Funcionário: {usuario} | Total de Ocorrências: {total}", ln=True, align="C")
+    pdf.ln(8)
 
-    # Listagem das ocorrências
+    # 🧾 Listagem das ocorrências
     for ocorr in lista:
-        # Conversão segura do ID
-        _id = ocorr.get("_id", "")
-        try:
+        # --- Captura segura do ID em qualquer formato ---
+        _id = ocorr.get("_id") or ocorr.get("id") or ""
+        if isinstance(_id, dict):
+            _id = _id.get("$oid", "")
+        else:
             _id = str(_id)
-        except Exception:
-            _id = ""
+        # ------------------------------------------------
 
         pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, f"ID (Banco): {_id}", ln=True)
 
-        pdf.set_font("Arial", "B", 12)
         pdf.cell(0, 10, f"Nome do Aluno: {ocorr.get('nome', '')}", ln=True)
         pdf.set_font("Arial", size=11)
         pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
@@ -207,7 +211,7 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
         pdf.cell(0, 10, "-" * 80, ln=True)
         pdf.ln(3)
 
-    # Rodapé de assinaturas
+    # ✍️ Rodapé de assinaturas
     pdf.ln(15)
     pdf.cell(90, 10, "_________________________", 0, 0, "C")
     pdf.cell(10)
