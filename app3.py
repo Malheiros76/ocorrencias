@@ -58,6 +58,9 @@ st.markdown("""
 def agora_local():
     tz = pytz.timezone("America/Sao_Paulo")
     return datetime.now(tz)
+
+    # Define o fuso horário do Brasil (São Paulo)
+    fuso = pytz.timezone('America/Sao_Paulo')
     
 # --- Conexão com MongoDB ---
 @st.cache_resource
@@ -77,7 +80,8 @@ from datetime import datetime
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
-📅 Data do Relatório: {datetime.now().strftime('%d/%m/%y às %H:%M')}
+📅 Data do Relatório:=datetime.now(fuso).strftime("%d/%m/%Y %H:%M:%S")
+print(data_geracao)
 ==============================\n"""
 
     for i, ocorr in enumerate(ocorrencias, start=1):
@@ -122,7 +126,7 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
         titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Informações do relatório ---
-    data_geracao = datetime.now(tz).strftime("%d/%m/%Y %H:%M:%S")
+    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     doc.add_paragraph(f"Gerado em: {data_geracao} | Total de ocorrências: {total}").alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph("")  # Linha em branco
@@ -181,7 +185,7 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf", usuario="Sist
     pdf.set_font("Arial", size=11)
 
     # 📅 Cabeçalho informativo
-    data_geracao = datetime.now(tz).strftime("%d/%m/%Y %H:%M:%S")
+    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 10, f"Gerado em: {data_geracao}", ln=True, align="C")
