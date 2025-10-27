@@ -122,7 +122,7 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
         titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Informações do relatório ---
-    data_geracao = time.localtime().strftime("%d/%m/%Y %H:%M:%S")
+    data_geracao = datetime.localtime().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     doc.add_paragraph(f"Gerado em: {data_geracao} | Total de ocorrências: {total}").alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph("")  # Linha em branco
@@ -181,7 +181,7 @@ def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf", usuario="Sist
     pdf.set_font("Arial", size=11)
 
     # 📅 Cabeçalho informativo
-    data_geracao = time.localtime().strftime("%d/%m/%Y %H:%M:%S")
+    data_geracao = datetime.localtime().strftime("%d/%m/%Y %H:%M:%S")
     total = len(lista)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 10, f"Gerado em: {data_geracao}", ln=True, align="C")
