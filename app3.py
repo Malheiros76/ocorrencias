@@ -139,7 +139,7 @@ def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
         doc.add_paragraph("-" * 50)
 
     # --- Rodapé de assinatura ---
-    doc.add_paragraph("\n\n" + "_" * 60 + "                      " + "_" * 60)
+    doc.add_paragraph("\n\n" + "_" * 40 + "                      " + "_" * 40)
     ass = doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
     ass.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
