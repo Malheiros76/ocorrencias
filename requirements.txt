@@ -1,4 +1,7 @@
-#streamlit==1.19.0
+streamlit>=1.32
+pymongo>=4.6
+pandas>=2.1
+dnspython
 altair==4.2.2
 pandas
 numpy
@@ -11,4 +14,5 @@ streamlit
 fpdf
 pillow
 pytz
+
 
