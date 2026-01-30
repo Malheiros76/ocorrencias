@@ -1015,6 +1015,7 @@ def pagina_exportar():
         st.warning("Nenhuma ocorrência encontrada.")
         return
 
+    # ===================== BUSCA POR CGM =====================
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
     col1, col2 = st.columns(2)
@@ -1043,6 +1044,7 @@ def pagina_exportar():
                     mime="application/pdf"
                 )
 
+    # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
     uid = str(uuid.uuid4())
     data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
@@ -1072,6 +1074,50 @@ def pagina_exportar():
                     mime="application/pdf"
                 )
 
+    # ===================== AGRUPADO POR ALUNO =====================
+    st.subheader("📄 Relatórios Individuais por Aluno")
+
+    ocorrencias_por_aluno = {}
+    for ocorr in resultados:
+        nome = ocorr.get("nome", "")
+        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
+
+    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+        with st.expander(f"📄 Relatório de {nome}"):
+            telefone = lista[0].get("telefone", "")
+
+            for ocorr in lista:
+                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
+
+            mensagem = formatar_mensagem_whatsapp(lista, nome)
+            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
+
+            if telefone:
+                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+                st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar DOCX",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                        mime="application/pdf"
+                    )
 # --- Lista de Alunos ---
 def pagina_lista():
     st.markdown("## 📄 Lista de Alunos")
