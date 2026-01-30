@@ -1004,175 +1004,121 @@ def pagina_ocorrencias():
 #                with open(caminho, "rb") as f:
 #                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
 
-import streamlit as st
-import base64
-import urllib.parse
-from datetime import datetime
+def pagina_exportar():
+    import urllib
+    import uuid
 
+    st.markdown("## 📥 Exportar Relatórios")
 
-def agora_local():
-    return datetime.now()
+    resultados = list(db.ocorrencias.find({}))
+    if not resultados:
+        st.warning("Nenhuma ocorrência encontrada.")
+        return
 
+    # ===================== BUSCA POR CGM =====================
+    st.subheader("🔍 Buscar por CGM")
+    cgm_input = st.text_input("Digite o CGM do aluno")
+    col1, col2 = st.columns(2)
 
-def pagina_ocorrencias():
-    st.markdown("## 🚨 Registro de Ocorrência")
-
-    alunos = list(db.alunos.find())
-    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
-
-    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
-
-    if busca_cgm:
-        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
-        if aluno_cgm:
-            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
-        else:
-            st.warning("Nenhum aluno encontrado com esse CGM.")
-            return
-    else:
-        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]
-
-    if nomes:
-        selecionado = st.selectbox("Selecione o aluno:", nomes)
-
-        if selecionado != "":
-            cgm = selecionado.split("CGM: ")[1].replace(")", "")
-            nome = selecionado.split(" (CGM:")[0]
-
-            ocorrencias = list(db.ocorrencias.find({"cgm": cgm}))
-            opcoes_ocorrencias = ["Nova Ocorrência"] + [
-                f"{o['data']} - {o['descricao'][:30]}..." for o in ocorrencias
-            ]
-
-            ocorrencia_selecionada = st.selectbox("📌 Ocorrência:", opcoes_ocorrencias)
-
-            descricao = ""
-            ata = None
-
-            # =========================
-            # NOVA OCORRÊNCIA
-            # =========================
-            if ocorrencia_selecionada == "Nova Ocorrência":
-                descricao = st.text_area("✏️ Descrição da Ocorrência", key="descricao_nova")
-
-                arquivo_ata = st.file_uploader(
-                    "📤 Importar ATA (PDF ou JPG)",
-                    type=["pdf", "jpg", "jpeg"],
-                    key="ata_upload_nova"
+    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if dados:
+            caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar Word",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
-                if arquivo_ata:
-                    ata = {
-                        "nome": arquivo_ata.name,
-                        "tipo": arquivo_ata.type,
-                        "conteudo": base64.b64encode(arquivo_ata.read()).decode("utf-8")
-                    }
-
-                if st.button("✅ Registrar Nova Ocorrência", key="btn_nova") and descricao:
-                    agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
-                    telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
-
-                    db.ocorrencias.insert_one({
-                        "cgm": cgm,
-                        "nome": nome,
-                        "telefone": telefone,
-                        "data": agora,
-                        "descricao": descricao,
-                        "ata": ata
-                    })
-
-                    st.success("✅ Ocorrência registrada com sucesso!")
-
-            # =========================
-            # ALTERAR / EXCLUIR
-            # =========================
-            else:
-                index = opcoes_ocorrencias.index(ocorrencia_selecionada) - 1
-                ocorrencia = ocorrencias[index]
-
-                descricao = st.text_area(
-                    "✏️ Descrição da Ocorrência",
-                    value=ocorrencia.get("descricao", ""),
-                    key=f"desc_{ocorrencia['_id']}"
+    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if dados:
+            caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.pdf",
+                    mime="application/pdf"
                 )
 
-                st.markdown("### 📄 ATA atual")
-                ata_atual = ocorrencia.get("ata")
+    # ===================== PERÍODO =====================
+    st.subheader("📅 Exportar por Período")
+    uid = str(uuid.uuid4())
+    data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
+    data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
-                if ata_atual and isinstance(ata_atual, dict):
-                    st.info(f"Arquivo: {ata_atual.get('nome')}")
+    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
+        inicio = data_inicio.strftime("%Y-%m-%d")
+        fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
 
-                novo_arquivo = st.file_uploader(
-                    "📤 Substituir ATA (PDF ou JPG)",
-                    type=["pdf", "jpg", "jpeg"],
-                    key=f"ata_upload_{ocorrencia['_id']}"
+        dados = list(db.ocorrencias.find({"data": {"$gte": inicio, "$lte": fim}}))
+        if dados:
+            caminho = exportar_ocorrencias_para_word(dados, "relatorio_periodo.docx")
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar DOCX",
+                    f.read(),
+                    file_name="relatorio_periodo.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
-                if novo_arquivo:
-                    ata = {
-                        "nome": novo_arquivo.name,
-                        "tipo": novo_arquivo.type,
-                        "conteudo": base64.b64encode(novo_arquivo.read()).decode("utf-8")
-                    }
-                else:
-                    ata = ata_atual
+            caminho_pdf = exportar_ocorrencias_para_pdf(dados, "relatorio_periodo.pdf")
+            with open(caminho_pdf, "rb") as f:
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name="relatorio_periodo.pdf",
+                    mime="application/pdf"
+                )
 
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    if st.button("💾 Alterar Ocorrência", key=f"alt_{ocorrencia['_id']}"):
-                        db.ocorrencias.update_one(
-                            {"_id": ocorrencia["_id"]},
-                            {"$set": {
-                                "descricao": descricao,
-                                "ata": ata
-                            }}
-                        )
-                        st.success("✅ Ocorrência atualizada com sucesso!")
-
-                with col2:
-                    confirmar = st.checkbox("Confirmar exclusão", key=f"conf_{ocorrencia['_id']}")
-                    if confirmar:
-                        if st.button("🗑️ Excluir Ocorrência", key=f"del_{ocorrencia['_id']}"):
-                            db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
-                            st.success("🗑️ Ocorrência excluída com sucesso!")
-                            st.experimental_rerun()
-
-    # ======================================================
-    # RELATÓRIOS AGRUPADOS + WHATSAPP
-    # ======================================================
-    st.markdown("---")
-    st.markdown("## 📊 Relatórios por Aluno")
-
-    resultados = list(db.ocorrencias.find())
+    # ===================== AGRUPADO POR ALUNO =====================
+    st.subheader("📄 Relatórios Individuais por Aluno")
 
     ocorrencias_por_aluno = {}
     for ocorr in resultados:
         nome = ocorr.get("nome", "")
-        if nome not in ocorrencias_por_aluno:
-            ocorrencias_por_aluno[nome] = []
-        ocorrencias_por_aluno[nome].append(ocorr)
+        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
 
     for nome, lista in sorted(ocorrencias_por_aluno.items()):
         with st.expander(f"📄 Relatório de {nome}"):
             telefone = lista[0].get("telefone", "")
 
             for ocorr in lista:
-                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
+                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
 
             mensagem = formatar_mensagem_whatsapp(lista, nome)
-
-            st.text_area(
-                "📋 Mensagem para WhatsApp",
-                mensagem,
-                height=200,
-                key=f"txt_msg_{nome}"
-            )
+            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
 
             if telefone:
                 numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar DOCX",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                        mime="application/pdf"
+                    )
+
 # --- Lista de Alunos ---
 def pagina_lista():
     st.markdown("## 📄 Lista de Alunos")
