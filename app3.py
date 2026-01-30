@@ -159,6 +159,7 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     from docx import Document
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
+
     pasta_ata = os.path.join(os.getcwd(), "atas_tmp")
     os.makedirs(pasta_ata, exist_ok=True)
 
@@ -171,17 +172,33 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
         doc.add_paragraph(f"Data: {o.get('data', '')}")
         doc.add_paragraph(f"Descrição: {o.get('descricao', '')}")
 
-        ata = o.get("ata", "")
-        if ata:
+        ata = o.get("ata")
+
+        # =========================
+        # ATA COMO ARQUIVO
+        # =========================
+        if isinstance(ata, dict):
             try:
-                conteudo = base64.b64decode(ata)
-                nome_ata = f"ATA_{i}.pdf"
-                caminho_ata = os.path.join(pasta_ata, nome_ata)
-                with open(caminho_ata, "wb") as f:
-                    f.write(conteudo)
-                doc.add_paragraph(f"ATA anexada: {nome_ata}")
-            except Exception:
-                doc.add_paragraph(f"ATA (texto): {ata}")
+                nome_ata = ata.get("nome", f"ATA_{i}")
+                conteudo = ata.get("conteudo")
+
+                if conteudo:
+                    bytes_ata = base64.b64decode(conteudo)
+                    caminho_ata = os.path.join(pasta_ata, nome_ata)
+
+                    with open(caminho_ata, "wb") as f:
+                        f.write(bytes_ata)
+
+                    doc.add_paragraph(f"ATA anexada: {nome_ata}")
+
+            except Exception as e:
+                doc.add_paragraph("ATA inválida ou corrompida.")
+
+        # =========================
+        # ATA ANTIGA (TEXTO)
+        # =========================
+        elif isinstance(ata, str) and ata.strip():
+            doc.add_paragraph(f"ATA (texto): {ata}")
 
         doc.add_paragraph("-" * 40)
 
