@@ -108,125 +108,205 @@ Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
 
 # --- Funções para exportar ---
-def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
-    from docx import Document
-    from docx.shared import Inches, Pt
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from datetime import datetime
-
-    doc = Document()
-
+#def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
+#    from docx import Document
+#    from docx.shared import Inches, Pt
+#    from docx.enum.text import WD_ALIGN_PARAGRAPH
+#    from datetime import datetime
+#
+#    doc = Document()
+#
     # Cabeçalho com imagem ou título
-    try:
-        doc.add_picture("CABECARIOAPP.png", width=Inches(6.0))
-    except:
-        titulo = doc.add_heading("Relatório de Ocorrências", 0)
-        titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#    try:
+#        doc.add_picture("CABECARIOAPP.png", width=Inches(6.0))
+#    except:
+#        titulo = doc.add_heading("Relatório de Ocorrências", 0)
+#        titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Informações do relatório ---
-    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    total = len(lista)
-    doc.add_paragraph(f"Gerado em: {data_geracao} | Total de ocorrências: {total}").alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph("")  # Linha em branco
+#    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+#    total = len(lista)
+#    doc.add_paragraph(f"Gerado em: {data_geracao} | Total de ocorrências: {total}").alignment = WD_ALIGN_PARAGRAPH.CENTER
+#    doc.add_paragraph("")  # Linha em branco
 
     # --- Ocorrências individuais ---
-    for ocorr in lista:
-        doc.add_paragraph(f"ID (Banco): {str(ocorr.get('_id', ''))}")
-        doc.add_paragraph(f"Nome do Aluno: {ocorr.get('nome', '')}")
-        doc.add_paragraph(f"CGM: {ocorr.get('cgm', '')}")
-        doc.add_paragraph(f"Turma: {ocorr.get('turma', '')}")
-        doc.add_paragraph(f"Telefone: {ocorr.get('telefone', '')}")
-        doc.add_paragraph(f"Data da Ocorrência: {ocorr.get('data', '')}")
-        doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
-        doc.add_paragraph("-" * 50)
+#    for ocorr in lista:
+#        doc.add_paragraph(f"ID (Banco): {str(ocorr.get('_id', ''))}")
+#        doc.add_paragraph(f"Nome do Aluno: {ocorr.get('nome', '')}")
+#        doc.add_paragraph(f"CGM: {ocorr.get('cgm', '')}")
+#        doc.add_paragraph(f"Turma: {ocorr.get('turma', '')}")
+#        doc.add_paragraph(f"Telefone: {ocorr.get('telefone', '')}")
+#        doc.add_paragraph(f"Data da Ocorrência: {ocorr.get('data', '')}")
+#        doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
+#        doc.add_paragraph("-" * 50)
 
     # --- Rodapé de assinatura ---
-    doc.add_paragraph("\n\n" + "_" * 40 + "                      " + "_" * 40)
-    ass = doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
-    ass.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#    doc.add_paragraph("\n\n" + "_" * 40 + "                      " + "_" * 40)
+#    ass = doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
+#    ass.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # --- Rodapé institucional opcional ---
-    rodape = doc.add_paragraph("\nSistema Escolar - Relatório gerado automaticamente")
-    rodape.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    rodape.runs[0].font.size = Pt(8)
+#    rodape = doc.add_paragraph("\nSistema Escolar - Relatório gerado automaticamente")
+#    rodape.alignment = WD_ALIGN_PARAGRAPH.CENTER
+#    rodape.runs[0].font.size = Pt(8)
 
-    doc.save(filename)
-    return filename
+#    doc.save(filename)
+#    return filename
 
-def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf", usuario="Sistema"):
-    from fpdf import FPDF
-    from datetime import datetime
+def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     import os
+    import base64
+    from docx import Document
 
-    class PDF(FPDF):
-        def header(self):
-            if os.path.exists("CABECARIOAPP.png"):
-                # Cabeçalho com imagem
-                self.image("CABECARIOAPP.png", x=10, y=8, w=190)
-                # Desce o cursor ~60px para não sobrepor o texto
-                self.set_y(68)
-            else:
+    caminho = os.path.join(os.getcwd(), nome_arquivo)
+    pasta_ata = os.path.join(os.getcwd(), "atas_tmp")
+    os.makedirs(pasta_ata, exist_ok=True)
+
+    doc = Document()
+    doc.add_heading("RELATÓRIO DE OCORRÊNCIAS", level=1)
+
+    for i, o in enumerate(ocorrencias, start=1):
+        doc.add_paragraph(f"Aluno: {o.get('nome', '')}")
+        doc.add_paragraph(f"CGM: {o.get('cgm', '')}")
+        doc.add_paragraph(f"Data: {o.get('data', '')}")
+        doc.add_paragraph(f"Descrição: {o.get('descricao', '')}")
+
+        ata = o.get("ata", "")
+        if ata:
+            try:
+                conteudo = base64.b64decode(ata)
+                nome_ata = f"ATA_{i}.pdf"
+                caminho_ata = os.path.join(pasta_ata, nome_ata)
+                with open(caminho_ata, "wb") as f:
+                    f.write(conteudo)
+                doc.add_paragraph(f"ATA anexada: {nome_ata}")
+            except Exception:
+                doc.add_paragraph(f"ATA (texto): {ata}")
+
+        doc.add_paragraph("-" * 40)
+
+    doc.save(caminho)
+    return caminho
+
+#def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf", usuario="Sistema"):
+#    from fpdf import FPDF
+#    from datetime import datetime
+#    import os
+
+#    class PDF(FPDF):
+#        def header(self):
+#            if os.path.exists("CABECARIOAPP.png"):
+#                # Cabeçalho com imagem
+#                self.image("CABECARIOAPP.png", x=10, y=8, w=190)
+#                # Desce o cursor ~60px para não sobrepor o texto
+#                self.set_y(68)
+#            else:
                 # Cabeçalho de fallback (sem imagem)
-                self.set_font("Arial", "B", 16)
-                self.cell(0, 10, "Relatório de Ocorrências", ln=True, align="C")
-                self.ln(5)
+#                self.set_font("Arial", "B", 16)
+#                self.cell(0, 10, "Relatório de Ocorrências", ln=True, align="C")
+#                self.ln(5)
 
-        def footer(self):
-            self.set_y(-15)
-            self.set_font("Arial", "I", 8)
-            self.set_text_color(100)
-            self.cell(0, 10, "Sistema Escolar - Relatório gerado automaticamente", align="C")
+#        def footer(self):
+#            self.set_y(-15)
+#            self.set_font("Arial", "I", 8)
+#            self.set_text_color(100)
+#            self.cell(0, 10, "Sistema Escolar - Relatório gerado automaticamente", align="C")
 
-    pdf = PDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.set_font("Arial", size=11)
+#    pdf = PDF()
+#    pdf.add_page()
+#    pdf.set_auto_page_break(auto=True, margin=15)
+#    pdf.set_font("Arial", size=11)
 
     # 📅 Cabeçalho informativo
-    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-    total = len(lista)
-    pdf.set_font("Arial", "B", 11)
-    pdf.cell(0, 10, f"Gerado em: {data_geracao}", ln=True, align="C")
-    pdf.cell(0, 10, f"Funcionário: {usuario} | Total de Ocorrências: {total}", ln=True, align="C")
-    pdf.ln(8)
+#    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+#    total = len(lista)
+#    pdf.set_font("Arial", "B", 11)
+#    pdf.cell(0, 10, f"Gerado em: {data_geracao}", ln=True, align="C")
+#    pdf.cell(0, 10, f"Funcionário: {usuario} | Total de Ocorrências: {total}", ln=True, align="C")
+#    pdf.ln(8)
 
     # 🧾 Listagem das ocorrências
-    for ocorr in lista:
+#    for ocorr in lista:
         # --- Captura segura do ID em qualquer formato ---
-        _id = ocorr.get("_id") or ocorr.get("id") or ""
-        if isinstance(_id, dict):
-            _id = _id.get("$oid", "")
-        else:
-            _id = str(_id)
+#        _id = ocorr.get("_id") or ocorr.get("id") or ""
+#        if isinstance(_id, dict):
+#           _id = _id.get("$oid", "")
+#        else:
+#            _id = str(_id)
         # ------------------------------------------------
 
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"ID (Banco): {_id}", ln=True)
+#        pdf.set_font("Arial", "B", 12)
+#        pdf.cell(0, 10, f"ID (Banco): {_id}", ln=True)
 
-        pdf.cell(0, 10, f"Nome do Aluno: {ocorr.get('nome', '')}", ln=True)
-        pdf.set_font("Arial", size=11)
-        pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
-        pdf.cell(0, 10, f"Turma: {ocorr.get('turma', '')}", ln=True)
-        pdf.cell(0, 10, f"Telefone: {ocorr.get('telefone', '')}", ln=True)
-        pdf.cell(0, 10, f"Data da Ocorrência: {ocorr.get('data', '')}", ln=True)
-        pdf.multi_cell(0, 10, f"Descrição: {ocorr.get('descricao', '')}")
-        pdf.cell(0, 10, "-" * 80, ln=True)
-        pdf.ln(3)
+#        pdf.cell(0, 10, f"Nome do Aluno: {ocorr.get('nome', '')}", ln=True)
+#        pdf.set_font("Arial", size=11)
+#        pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
+#        pdf.cell(0, 10, f"Turma: {ocorr.get('turma', '')}", ln=True)
+#        pdf.cell(0, 10, f"Telefone: {ocorr.get('telefone', '')}", ln=True)
+#        pdf.cell(0, 10, f"Data da Ocorrência: {ocorr.get('data', '')}", ln=True)
+#        pdf.multi_cell(0, 10, f"Descrição: {ocorr.get('descricao', '')}")
+#        pdf.cell(0, 10, "-" * 80, ln=True)
+#        pdf.ln(3)
 
     # ✍️ Rodapé de assinaturas
-    pdf.ln(15)
-    pdf.cell(90, 10, "_________________________", 0, 0, "C")
-    pdf.cell(10)
-    pdf.cell(90, 10, "_________________________", 0, 1, "C")
-    pdf.cell(90, 10, "Funcionário", 0, 0, "C")
-    pdf.cell(10)
-    pdf.cell(90, 10, "Responsável", 0, 1, "C")
+#    pdf.ln(15)
+#    pdf.cell(90, 10, "_________________________", 0, 0, "C")
+#    pdf.cell(10)
+#    pdf.cell(90, 10, "_________________________", 0, 1, "C")
+#    pdf.cell(90, 10, "Funcionário", 0, 0, "C")
+#    pdf.cell(10)
+#    pdf.cell(90, 10, "Responsável", 0, 1, "C")
 
-    pdf.output(filename)
-    return filename
+#    pdf.output(filename)
+#    return filename
     
-import streamlit as st
-import hashlib
+#import streamlit as st
+#import hashlib
+
+def exportar_ocorrencias_para_pdf(ocorrencias, nome_arquivo):
+    import os
+    import base64
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    caminho = os.path.join(os.getcwd(), nome_arquivo)
+    c = canvas.Canvas(caminho, pagesize=A4)
+    largura, altura = A4
+
+    y = altura - 40
+    c.setFont("Helvetica", 10)
+    c.drawString(40, y, "RELATÓRIO DE OCORRÊNCIAS")
+    y -= 30
+
+    for o in ocorrencias:
+        linhas = [
+            f"Aluno: {o.get('nome', '')}",
+            f"CGM: {o.get('cgm', '')}",
+            f"Data: {o.get('data', '')}",
+            f"Descrição: {o.get('descricao', '')}",
+        ]
+
+        ata = o.get("ata", "")
+        if ata:
+            try:
+                base64.b64decode(ata)
+                linhas.append("ATA: arquivo anexado (PDF/JPG)")
+            except Exception:
+                linhas.append(f"ATA (texto): {ata}")
+
+        linhas.append("-" * 60)
+
+        for linha in linhas:
+            if y < 50:
+                c.showPage()
+                c.setFont("Helvetica", 10)
+                y = altura - 40
+            c.drawString(40, y, linha)
+            y -= 15
+
+    c.save()
+    return caminho
+
 
 # --- Login ---
 def pagina_login():
@@ -807,122 +887,190 @@ def pagina_ocorrencias():
                             st.success("🗑️ Ocorrência excluída com sucesso!")
                             st.experimental_rerun()
 # --- Exportar Relatórios ---
+#def pagina_exportar():
+#    import os
+#    import urllib
+#    import uuid
+#    from docx import Document
+#    from docx.shared import Inches
+#    from fpdf import FPDF
+#    from datetime import datetime
+
+#    st.markdown("## 📥 Exportar Relatórios")
+
+#    resultados = list(db.ocorrencias.find({}))
+
+#    if not resultados:
+#        st.warning("Nenhuma ocorrência encontrada.")
+#        return
+
+    # Exportar por CGM
+#    st.subheader("🔍 Buscar por CGM")
+#    cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
+#    col1, col2 = st.columns(2)
+
+#    if col1.button("📄 Gerar Word por CGM", key="btn_word_cgm") and cgm_input:
+#        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+#        if resultados_filtrados:
+#            caminho = exportar_ocorrencias_para_word(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.docx")
+#            with open(caminho, "rb") as f:
+#                st.download_button("📥 Baixar Word", f, file_name=f"ocorrencias_cgm_{cgm_input}.docx")
+#        else:
+#            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+#    if col2.button("🧾 Gerar PDF por CGM", key="btn_pdf_cgm") and cgm_input:
+#        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
+#        if resultados_filtrados:
+#            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.pdf")
+#            with open(caminho, "rb") as f:
+#                st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencias_cgm_{cgm_input}.pdf")
+#        else:
+#            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    # Exportar todas as ocorrências
+#   st.subheader("📦 Exportar Todas as Ocorrências")
+#    if resultados:
+#        nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
+#        col1, col2, col3 = st.columns(3)
+
+#        with col1:
+#            if st.button("📄 Gerar Word", key="btn_word_all"):
+#                caminho = exportar_ocorrencias_para_word(resultados, f"{nome_primeiro}_ALL.docx")
+#                with open(caminho, "rb") as f:
+#                    st.download_button("📥 Baixar Word", f, file_name=f"{nome_primeiro}_ALL.docx")
+
+#        with col2:
+#            if st.button("🧾 Gerar PDF", key="btn_pdf_all"):
+#                caminho = exportar_ocorrencias_para_pdf(resultados, f"{nome_primeiro}_ALL.pdf")
+#                with open(caminho, "rb") as f:
+#                    st.download_button("📥 Baixar PDF", f, file_name=f"{nome_primeiro}_ALL.pdf")
+
+#        with col3:
+#            st.info("Mensagens individuais abaixo ⬇️")
+
+    # Agrupamento por período (corrigido)
+#    st.subheader("📅 Exportar Agrupado por Período")
+
+#    unique_id = str(uuid.uuid4())
+#    data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
+#    data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
+
+#    if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
+#        resultados_filtrados = list(db.ocorrencias.find({
+#            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
+#        }))
+#        if resultados_filtrados:
+#            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+#            with open(caminho, "rb") as f:
+#                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+
+#            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+#            with open(caminho_pdf, "rb") as f:
+#                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
+#        else:
+#            st.warning("Nenhuma ocorrência no período informado.")
+
+    # Agrupar por aluno e exibir relatórios individuais
+#    ocorrencias_por_aluno = {}
+#    for ocorr in resultados:
+#        nome = ocorr.get("nome", "")
+#        if nome not in ocorrencias_por_aluno:
+#            ocorrencias_por_aluno[nome] = []
+#        ocorrencias_por_aluno[nome].append(ocorr)
+
+#    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+#        with st.expander(f"📄 Relatório de {nome}"):
+#            telefone = lista[0].get("telefone", "")
+#            for ocorr in lista:
+#                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
+#
+#            mensagem = formatar_mensagem_whatsapp(lista, nome)
+#            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"txt_msg_{nome}")
+
+#            if telefone:
+#                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+#                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+#                st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+            # Botões exportação individual
+#            col1, col2 = st.columns(2)
+#            if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
+#                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+#                with open(caminho, "rb") as f:
+#                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+
+#            if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
+#                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+#                with open(caminho, "rb") as f:
+#                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+
 def pagina_exportar():
-    import os
     import urllib
     import uuid
-    from docx import Document
-    from docx.shared import Inches
-    from fpdf import FPDF
-    from datetime import datetime
 
     st.markdown("## 📥 Exportar Relatórios")
 
     resultados = list(db.ocorrencias.find({}))
-
     if not resultados:
         st.warning("Nenhuma ocorrência encontrada.")
         return
 
-    # Exportar por CGM
     st.subheader("🔍 Buscar por CGM")
-    cgm_input = st.text_input("Digite o CGM do aluno para gerar o relatório")
+    cgm_input = st.text_input("Digite o CGM do aluno")
     col1, col2 = st.columns(2)
 
-    if col1.button("📄 Gerar Word por CGM", key="btn_word_cgm") and cgm_input:
-        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_word(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.docx")
+    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if dados:
+            caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
             with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar Word", f, file_name=f"ocorrencias_cgm_{cgm_input}.docx")
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+                st.download_button(
+                    "📥 Baixar Word",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
 
-    if col2.button("🧾 Gerar PDF por CGM", key="btn_pdf_cgm") and cgm_input:
-        resultados_filtrados = list(db.ocorrencias.find({"cgm": cgm_input}))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_pdf(resultados_filtrados, f"ocorrencias_cgm_{cgm_input}.pdf")
+    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        if dados:
+            caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
             with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar PDF", f, file_name=f"ocorrencias_cgm_{cgm_input}.pdf")
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.pdf",
+                    mime="application/pdf"
+                )
 
-    # Exportar todas as ocorrências
-    st.subheader("📦 Exportar Todas as Ocorrências")
-    if resultados:
-        nome_primeiro = resultados[0].get("nome", "relatorio").replace(" ", "_").upper()
-        col1, col2, col3 = st.columns(3)
+    st.subheader("📅 Exportar por Período")
+    uid = str(uuid.uuid4())
+    data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
+    data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
-        with col1:
-            if st.button("📄 Gerar Word", key="btn_word_all"):
-                caminho = exportar_ocorrencias_para_word(resultados, f"{nome_primeiro}_ALL.docx")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar Word", f, file_name=f"{nome_primeiro}_ALL.docx")
+    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
+        inicio = data_inicio.strftime("%Y-%m-%d")
+        fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
 
-        with col2:
-            if st.button("🧾 Gerar PDF", key="btn_pdf_all"):
-                caminho = exportar_ocorrencias_para_pdf(resultados, f"{nome_primeiro}_ALL.pdf")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=f"{nome_primeiro}_ALL.pdf")
-
-        with col3:
-            st.info("Mensagens individuais abaixo ⬇️")
-
-    # Agrupamento por período (corrigido)
-    st.subheader("📅 Exportar Agrupado por Período")
-
-    unique_id = str(uuid.uuid4())
-    data_inicio = st.date_input("Data inicial", key=f"data_inicio_export_{unique_id}")
-    data_fim = st.date_input("Data final", key=f"data_fim_export_{unique_id}")
-
-    if st.button("🔎 Gerar relatório agrupado", key=f"btn_agrupado_{unique_id}"):
-        resultados_filtrados = list(db.ocorrencias.find({
-            "data": {"$gte": str(data_inicio), "$lte": str(data_fim)}
-        }))
-        if resultados_filtrados:
-            caminho = exportar_ocorrencias_para_word(resultados_filtrados, "relatorio_periodo.docx")
+        dados = list(db.ocorrencias.find({"data": {"$gte": inicio, "$lte": fim}}))
+        if dados:
+            caminho = exportar_ocorrencias_para_word(dados, "relatorio_periodo.docx")
             with open(caminho, "rb") as f:
-                st.download_button("📥 Baixar DOCX agrupado", f, file_name="relatorio_periodo.docx")
+                st.download_button(
+                    "📥 Baixar DOCX",
+                    f.read(),
+                    file_name="relatorio_periodo.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
 
-            caminho_pdf = exportar_ocorrencias_para_pdf(resultados_filtrados, "relatorio_periodo.pdf")
+            caminho_pdf = exportar_ocorrencias_para_pdf(dados, "relatorio_periodo.pdf")
             with open(caminho_pdf, "rb") as f:
-                st.download_button("📥 Baixar PDF agrupado", f, file_name="relatorio_periodo.pdf")
-        else:
-            st.warning("Nenhuma ocorrência no período informado.")
-
-    # Agrupar por aluno e exibir relatórios individuais
-    ocorrencias_por_aluno = {}
-    for ocorr in resultados:
-        nome = ocorr.get("nome", "")
-        if nome not in ocorrencias_por_aluno:
-            ocorrencias_por_aluno[nome] = []
-        ocorrencias_por_aluno[nome].append(ocorr)
-
-    for nome, lista in sorted(ocorrencias_por_aluno.items()):
-        with st.expander(f"📄 Relatório de {nome}"):
-            telefone = lista[0].get("telefone", "")
-            for ocorr in lista:
-                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
-
-            mensagem = formatar_mensagem_whatsapp(lista, nome)
-            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"txt_msg_{nome}")
-
-            if telefone:
-                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
-                st.markdown(f"[📱 Enviar para {telefone}]({link})")
-
-            # Botões exportação individual
-            col1, col2 = st.columns(2)
-            if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
-                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
-
-            if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
-                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name="relatorio_periodo.pdf",
+                    mime="application/pdf"
+                )
 
 # --- Lista de Alunos ---
 def pagina_lista():
