@@ -1004,95 +1004,175 @@ def pagina_ocorrencias():
 #                with open(caminho, "rb") as f:
 #                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
 
-def pagina_exportar():
-    import streamlit as st
-    import base64
-    import urllib.parse
-    from datetime import datetime
+import streamlit as st
+import base64
+import urllib.parse
+from datetime import datetime
 
-    st.markdown("## 📥 Exportar Relatórios")
 
-    resultados = list(db.ocorrencias.find({}))
+def agora_local():
+    return datetime.now()
 
-    if not resultados:
-        st.warning("Nenhuma ocorrência encontrada.")
-        return
 
-    # =========================
-    # FUNÇÃO VISUALIZAR ATA
-    # =========================
-    def visualizar_ata(ata):
-        if not ata or not isinstance(ata, dict):
+def pagina_ocorrencias():
+    st.markdown("## 🚨 Registro de Ocorrência")
+
+    alunos = list(db.alunos.find())
+    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
+
+    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
+
+    if busca_cgm:
+        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
+        if aluno_cgm:
+            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
+        else:
+            st.warning("Nenhum aluno encontrado com esse CGM.")
             return
+    else:
+        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]
 
-        nome = ata.get("nome")
-        tipo = ata.get("tipo")
-        conteudo = ata.get("conteudo")
+    if nomes:
+        selecionado = st.selectbox("Selecione o aluno:", nomes)
 
-        if not conteudo:
-            return
+        if selecionado != "":
+            cgm = selecionado.split("CGM: ")[1].replace(")", "")
+            nome = selecionado.split(" (CGM:")[0]
 
-        bytes_ata = base64.b64decode(conteudo)
+            ocorrencias = list(db.ocorrencias.find({"cgm": cgm}))
+            opcoes_ocorrencias = ["Nova Ocorrência"] + [
+                f"{o['data']} - {o['descricao'][:30]}..." for o in ocorrencias
+            ]
 
-        st.markdown("##### 📄 ATA")
+            ocorrencia_selecionada = st.selectbox("📌 Ocorrência:", opcoes_ocorrencias)
 
-        if "pdf" in tipo:
-            pdf_base64 = base64.b64encode(bytes_ata).decode("utf-8")
-            st.markdown(
-                f"""
-                <iframe src="data:application/pdf;base64,{pdf_base64}"
-                width="100%" height="500px"></iframe>
-                """,
-                unsafe_allow_html=True
-            )
-        elif "image" in tipo:
-            st.image(bytes_ata, caption=nome, use_container_width=True)
+            descricao = ""
+            ata = None
 
-        st.download_button(
-            "⬇️ Baixar ATA",
-            data=bytes_ata,
-            file_name=nome,
-            mime=tipo
-        )
+            # =========================
+            # NOVA OCORRÊNCIA
+            # =========================
+            if ocorrencia_selecionada == "Nova Ocorrência":
+                descricao = st.text_area("✏️ Descrição da Ocorrência", key="descricao_nova")
 
-    # =========================
-    # AGRUPAR POR ALUNO
-    # =========================
+                arquivo_ata = st.file_uploader(
+                    "📤 Importar ATA (PDF ou JPG)",
+                    type=["pdf", "jpg", "jpeg"],
+                    key="ata_upload_nova"
+                )
+
+                if arquivo_ata:
+                    ata = {
+                        "nome": arquivo_ata.name,
+                        "tipo": arquivo_ata.type,
+                        "conteudo": base64.b64encode(arquivo_ata.read()).decode("utf-8")
+                    }
+
+                if st.button("✅ Registrar Nova Ocorrência", key="btn_nova") and descricao:
+                    agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
+                    telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+
+                    db.ocorrencias.insert_one({
+                        "cgm": cgm,
+                        "nome": nome,
+                        "telefone": telefone,
+                        "data": agora,
+                        "descricao": descricao,
+                        "ata": ata
+                    })
+
+                    st.success("✅ Ocorrência registrada com sucesso!")
+
+            # =========================
+            # ALTERAR / EXCLUIR
+            # =========================
+            else:
+                index = opcoes_ocorrencias.index(ocorrencia_selecionada) - 1
+                ocorrencia = ocorrencias[index]
+
+                descricao = st.text_area(
+                    "✏️ Descrição da Ocorrência",
+                    value=ocorrencia.get("descricao", ""),
+                    key=f"desc_{ocorrencia['_id']}"
+                )
+
+                st.markdown("### 📄 ATA atual")
+                ata_atual = ocorrencia.get("ata")
+
+                if ata_atual and isinstance(ata_atual, dict):
+                    st.info(f"Arquivo: {ata_atual.get('nome')}")
+
+                novo_arquivo = st.file_uploader(
+                    "📤 Substituir ATA (PDF ou JPG)",
+                    type=["pdf", "jpg", "jpeg"],
+                    key=f"ata_upload_{ocorrencia['_id']}"
+                )
+
+                if novo_arquivo:
+                    ata = {
+                        "nome": novo_arquivo.name,
+                        "tipo": novo_arquivo.type,
+                        "conteudo": base64.b64encode(novo_arquivo.read()).decode("utf-8")
+                    }
+                else:
+                    ata = ata_atual
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    if st.button("💾 Alterar Ocorrência", key=f"alt_{ocorrencia['_id']}"):
+                        db.ocorrencias.update_one(
+                            {"_id": ocorrencia["_id"]},
+                            {"$set": {
+                                "descricao": descricao,
+                                "ata": ata
+                            }}
+                        )
+                        st.success("✅ Ocorrência atualizada com sucesso!")
+
+                with col2:
+                    confirmar = st.checkbox("Confirmar exclusão", key=f"conf_{ocorrencia['_id']}")
+                    if confirmar:
+                        if st.button("🗑️ Excluir Ocorrência", key=f"del_{ocorrencia['_id']}"):
+                            db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
+                            st.success("🗑️ Ocorrência excluída com sucesso!")
+                            st.experimental_rerun()
+
+    # ======================================================
+    # RELATÓRIOS AGRUPADOS + WHATSAPP
+    # ======================================================
+    st.markdown("---")
+    st.markdown("## 📊 Relatórios por Aluno")
+
+    resultados = list(db.ocorrencias.find())
+
     ocorrencias_por_aluno = {}
-
     for ocorr in resultados:
         nome = ocorr.get("nome", "")
-        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
+        if nome not in ocorrencias_por_aluno:
+            ocorrencias_por_aluno[nome] = []
+        ocorrencias_por_aluno[nome].append(ocorr)
 
-    # =========================
-    # RELATÓRIOS INDIVIDUAIS
-    # =========================
     for nome, lista in sorted(ocorrencias_por_aluno.items()):
         with st.expander(f"📄 Relatório de {nome}"):
-
             telefone = lista[0].get("telefone", "")
 
             for ocorr in lista:
-                st.write(f"📅 {ocorr.get('data')} - 📝 {ocorr.get('descricao')}")
-
-                # VISUALIZAR ATA
-                if ocorr.get("ata"):
-                    visualizar_ata(ocorr["ata"])
+                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
 
             mensagem = formatar_mensagem_whatsapp(lista, nome)
 
             st.text_area(
-                "📋 WhatsApp",
+                "📋 Mensagem para WhatsApp",
                 mensagem,
-                height=180,
-                key=f"msg_{nome}"
+                height=200,
+                key=f"txt_msg_{nome}"
             )
 
             if telefone:
                 numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
-
 # --- Lista de Alunos ---
 def pagina_lista():
     st.markdown("## 📄 Lista de Alunos")
