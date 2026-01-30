@@ -10,6 +10,8 @@ import urllib.parse
 import uuid
 import pytz
 
+import base64
+
 st.set_page_config(page_title="Sistema Escolar - CCMLC by Malheiros V2.0.3 ", layout="centered")
 
 # --- Estilização Visual ---
@@ -603,6 +605,94 @@ def pagina_cadastro():
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
 
+#def pagina_ocorrencias():
+#    st.markdown("## 🚨 Registro de Ocorrência")
+#
+#    alunos = list(db.alunos.find())
+#    alunos_ordenados = sorted(alunos, key=lambda x: x['nome'])
+#
+#    busca_cgm = st.text_input("🔍 Buscar aluno por CGM")
+#
+#    if busca_cgm:
+#        aluno_cgm = next((a for a in alunos_ordenados if a["cgm"] == busca_cgm), None)
+#        if aluno_cgm:
+#            nomes = [f"{aluno_cgm['nome']} (CGM: {aluno_cgm['cgm']})"]
+#        else:
+#            st.warning("Nenhum aluno encontrado com esse CGM.")
+#            return
+#    else:
+#        nomes = [""] + [f"{a['nome']} (CGM: {a['cgm']})" for a in alunos_ordenados]
+#
+#    if nomes:
+#        selecionado = st.selectbox("Selecione o aluno:", nomes)
+#
+#        if selecionado != "":
+#            cgm = selecionado.split("CGM: ")[1].replace(")", "")
+#            nome = selecionado.split(" (CGM:")[0]
+#
+            # Ocorrências existentes
+#            ocorrencias = list(db.ocorrencias.find({"cgm": cgm}))
+#            opcoes_ocorrencias = ["Nova Ocorrência"] + [f"{o['data']} - {o['descricao'][:30]}..." for o in ocorrencias]
+#
+#            ocorrencia_selecionada = st.selectbox("📌 Ocorrência:", opcoes_ocorrencias)
+#
+#            # Inicializa campos
+#            descricao = ""
+#            ata = ""
+
+            # --- NOVA OCORRÊNCIA ---
+#            if ocorrencia_selecionada == "Nova Ocorrência":
+#                descricao = st.text_area("✏️ Descrição da Ocorrência", key="descricao_nova")
+#                ata = st.text_input("📄 ATA (opcional)", key="ata_nova")
+#
+#                if st.button("✅ Registrar Nova Ocorrência", key="btn_nova") and descricao:
+#                    agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
+#                    telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+#                    db.ocorrencias.insert_one({
+#                        "cgm": cgm,
+#                        "nome": nome,
+#                        "telefone": telefone,
+#                        "data": agora,
+#                        "descricao": descricao,
+#                        "ata": ata
+#                    })
+#                    st.success("✅ Ocorrência registrada com sucesso!")
+#
+#            # --- ALTERAR OU EXCLUIR EXISTENTE ---
+#            else:
+#                index = opcoes_ocorrencias.index(ocorrencia_selecionada) - 1
+#                ocorrencia = ocorrencias[index]
+#
+#                descricao = st.text_area("✏️ Descrição da Ocorrência",
+#                                         value=ocorrencia.get("descricao", ""),
+#                                         key=f"desc_{ocorrencia['_id']}")
+#                ata = st.text_input("📄 ATA (opcional)",
+#                                    value=ocorrencia.get("ata", ""),
+#                                    key=f"ata_{ocorrencia['_id']}")
+#
+#                col1, col2 = st.columns(2)
+#
+#                # --- ALTERAR ---
+#                with col1:
+#                    if st.button("💾 Alterar Ocorrência", key=f"alt_{ocorrencia['_id']}"):
+#                        db.ocorrencias.update_one(
+#                            {"_id": ocorrencia["_id"]},
+#                            {"$set": {
+#                                "descricao": descricao,
+#                                "ata": ata
+#                            }}
+#                        )
+#                        st.success("✅ Ocorrência atualizada com sucesso!")
+#
+#                # --- EXCLUIR COM CONFIRMAÇÃO ---
+#                with col2:
+#                    confirmar_exclusao = st.checkbox("Confirmar exclusão", key=f"conf_{ocorrencia['_id']}")
+#                    if confirmar_exclusao:
+#                        if st.button("🗑️ Excluir Ocorrência", key=f"del_{ocorrencia['_id']}"):
+#                            db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
+#                            st.success("🗑️ Ocorrência excluída com sucesso!")
+#                            st.experimental_rerun()  # Atualiza a tela após exclusão
+
 def pagina_ocorrencias():
     st.markdown("## 🚨 Registro de Ocorrência")
 
@@ -628,24 +718,34 @@ def pagina_ocorrencias():
             cgm = selecionado.split("CGM: ")[1].replace(")", "")
             nome = selecionado.split(" (CGM:")[0]
 
-            # Ocorrências existentes
             ocorrencias = list(db.ocorrencias.find({"cgm": cgm}))
-            opcoes_ocorrencias = ["Nova Ocorrência"] + [f"{o['data']} - {o['descricao'][:30]}..." for o in ocorrencias]
+            opcoes_ocorrencias = ["Nova Ocorrência"] + [
+                f"{o['data']} - {o['descricao'][:30]}..." for o in ocorrencias
+            ]
 
             ocorrencia_selecionada = st.selectbox("📌 Ocorrência:", opcoes_ocorrencias)
 
-            # Inicializa campos
             descricao = ""
             ata = ""
 
-            # --- NOVA OCORRÊNCIA ---
+            # ================= NOVA OCORRÊNCIA =================
             if ocorrencia_selecionada == "Nova Ocorrência":
                 descricao = st.text_area("✏️ Descrição da Ocorrência", key="descricao_nova")
                 ata = st.text_input("📄 ATA (opcional)", key="ata_nova")
 
+                arquivo_ata = st.file_uploader(
+                    "📤 Importar ATA (PDF ou JPG)",
+                    type=["pdf", "jpg", "jpeg"],
+                    key="upload_ata_nova"
+                )
+
+                if arquivo_ata:
+                    ata = base64.b64encode(arquivo_ata.read()).decode("utf-8")
+
                 if st.button("✅ Registrar Nova Ocorrência", key="btn_nova") and descricao:
                     agora = agora_local().strftime("%Y-%m-%d %H:%M:%S")
                     telefone = next((a['telefone'] for a in alunos if a['cgm'] == cgm), "")
+
                     db.ocorrencias.insert_one({
                         "cgm": cgm,
                         "nome": nome,
@@ -654,23 +754,37 @@ def pagina_ocorrencias():
                         "descricao": descricao,
                         "ata": ata
                     })
+
                     st.success("✅ Ocorrência registrada com sucesso!")
 
-            # --- ALTERAR OU EXCLUIR EXISTENTE ---
+            # ================= OCORRÊNCIA EXISTENTE =================
             else:
                 index = opcoes_ocorrencias.index(ocorrencia_selecionada) - 1
                 ocorrencia = ocorrencias[index]
 
-                descricao = st.text_area("✏️ Descrição da Ocorrência",
-                                         value=ocorrencia.get("descricao", ""),
-                                         key=f"desc_{ocorrencia['_id']}")
-                ata = st.text_input("📄 ATA (opcional)",
-                                    value=ocorrencia.get("ata", ""),
-                                    key=f"ata_{ocorrencia['_id']}")
+                descricao = st.text_area(
+                    "✏️ Descrição da Ocorrência",
+                    value=ocorrencia.get("descricao", ""),
+                    key=f"desc_{ocorrencia['_id']}"
+                )
+
+                ata = st.text_input(
+                    "📄 ATA (opcional)",
+                    value=ocorrencia.get("ata", ""),
+                    key=f"ata_{ocorrencia['_id']}"
+                )
+
+                arquivo_ata = st.file_uploader(
+                    "📤 Importar nova ATA (PDF ou JPG)",
+                    type=["pdf", "jpg", "jpeg"],
+                    key=f"upload_ata_{ocorrencia['_id']}"
+                )
+
+                if arquivo_ata:
+                    ata = base64.b64encode(arquivo_ata.read()).decode("utf-8")
 
                 col1, col2 = st.columns(2)
 
-                # --- ALTERAR ---
                 with col1:
                     if st.button("💾 Alterar Ocorrência", key=f"alt_{ocorrencia['_id']}"):
                         db.ocorrencias.update_one(
@@ -682,15 +796,16 @@ def pagina_ocorrencias():
                         )
                         st.success("✅ Ocorrência atualizada com sucesso!")
 
-                # --- EXCLUIR COM CONFIRMAÇÃO ---
                 with col2:
-                    confirmar_exclusao = st.checkbox("Confirmar exclusão", key=f"conf_{ocorrencia['_id']}")
+                    confirmar_exclusao = st.checkbox(
+                        "Confirmar exclusão",
+                        key=f"conf_{ocorrencia['_id']}"
+                    )
                     if confirmar_exclusao:
                         if st.button("🗑️ Excluir Ocorrência", key=f"del_{ocorrencia['_id']}"):
                             db.ocorrencias.delete_one({"_id": ocorrencia["_id"]})
                             st.success("🗑️ Ocorrência excluída com sucesso!")
-                            st.experimental_rerun()  # Atualiza a tela após exclusão
-
+                            st.experimental_rerun()
 # --- Exportar Relatórios ---
 def pagina_exportar():
     import os
