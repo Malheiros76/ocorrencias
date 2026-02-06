@@ -414,7 +414,7 @@ def pagina_cadastro():
     if limpar:
         st.experimental_rerun()
 
-# --- Importação de alunos via arquivo ---
+    # --- Importação de alunos via arquivo ---
     st.subheader("📥 Importar Alunos via TXT ou CSV")
     arquivo = st.file_uploader("Escolha o arquivo .txt ou .csv", type=["txt", "csv"])
     delimitador = st.selectbox("Escolha o delimitador", [";", ",", "\\t"])
@@ -465,7 +465,6 @@ def pagina_cadastro():
 
         except Exception as e:
             st.error(f"Erro ao ler o arquivo: {e}")
-
 
 def pagina_cadastro():
     st.markdown("## ✏️ Cadastro de Alunos")
