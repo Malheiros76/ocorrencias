@@ -435,8 +435,8 @@ def pagina_cadastro():
                         nome = str(row.get('nome', '')).strip()
                         data = str(row.get('data', '')).strip()
                         telefone = str(row.get('telefone', '')).strip()
-                        responsavel = str(row.get('responsavel', '')).strip()
                         turma = str(row.get('turma', '')).strip()
+                        responsavel = str(row.get('responsavel', '')).strip()
 
                         if not cgm or not nome:
                             erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
@@ -447,8 +447,8 @@ def pagina_cadastro():
                             "nome": nome,
                             "data": data,
                             "telefone": telefone,
-                            "responsavel": responsavel,
-                            "turma": turma
+                            "turma": turma,
+                            "responsavel": responsavel
                         }
 
                         db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
