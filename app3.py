@@ -75,7 +75,21 @@ print(db.list_collection_names())
 
 # --- Funções auxiliares ---
 from datetime import datetime
+import pandas as pd
 
+def data_segura(valor):
+    try:
+        if not valor:
+            return datetime.now().date()
+
+        data = pd.to_datetime(valor, errors="coerce")
+
+        if pd.isna(data):
+            return datetime.now().date()
+
+        return data.date()
+    except Exception:
+        return datetime.now().date()
 def formatar_mensagem_whatsapp(ocorrencias, nome):
     msg = f"""📋 RELATÓRIO DE OCORRÊNCIAS
 👤 Aluno: {nome}
