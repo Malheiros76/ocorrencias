@@ -645,57 +645,57 @@ def pagina_cadastro():
     if limpar:
         st.experimental_rerun()
 
-    # --- Importação de alunos via arquivo ---
-    st.subheader("📥 Importar Alunos via TXT ou CSV")
-    arquivo = st.file_uploader("Escolha o arquivo .txt ou .csv", type=["txt", "csv"])
-    delimitador = st.selectbox("Escolha o delimitador", [";", ",", "\\t"])
-    delimitador_real = {";": ";", ",": ",", "\\t": "\t"}[delimitador]
-
-    if arquivo is not None:
-        try:
-            df_import = pd.read_csv(arquivo, delimiter=delimitador_real)
-            df_import.columns = [col.strip().lower() for col in df_import.columns]
-            st.dataframe(df_import)
-
-            if st.button("Importar para o Sistema"):
-                erros = []
-                total_importados = 0
-                for _, row in df_import.iterrows():
-                    try:
-                        cgm = str(row.get('cgm', '')).strip()
-                        nome = str(row.get('nome', '')).strip()
-                        data = str(row.get('data', '')).strip()
-                        telefone = str(row.get('telefone', '')).strip()
-                        responsavel = str(row.get('responsavel', '')).strip()
-                        turma = str(row.get('turma', '')).strip()
-
-                        if not cgm or not nome:
-                            erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
-                            continue
-
-                        aluno = {
-                            "cgm": cgm,
-                            "nome": nome,
-                            "data": data,
-                            "telefone": telefone,
-                            "responsavel": responsavel,
-                            "turma": turma
-                        }
-
-                        db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
-                        total_importados += 1
-
-                    except Exception as e:
-                        erros.append(f"Erro na linha {row.to_dict()} → {e}")
-
-                st.success(f"✅ Importação finalizada. Total importado/atualizado: {total_importados}")
-                if erros:
-                    st.warning("⚠️ Erros encontrados:")
-                    for erro in erros:
-                        st.error(erro)
-
-        except Exception as e:
-            st.error(f"Erro ao ler o arquivo: {e}")
+        # --- Importação de alunos via arquivo ---
+        st.subheader("📥 Importar Alunos via TXT ou CSV")
+        arquivo = st.file_uploader("Escolha o arquivo .txt ou .csv", type=["txt", "csv"])
+        delimitador = st.selectbox("Escolha o delimitador", [";", ",", "\\t"])
+        delimitador_real = {";": ";", ",": ",", "\\t": "\t"}[delimitador]
+    
+        if arquivo is not None:
+            try:
+                df_import = pd.read_csv(arquivo, delimiter=delimitador_real)
+                df_import.columns = [col.strip().lower() for col in df_import.columns]
+                st.dataframe(df_import)
+    
+                if st.button("Importar para o Sistema"):
+                    erros = []
+                    total_importados = 0
+                    for _, row in df_import.iterrows():
+                        try:
+                            cgm = str(row.get('cgm', '')).strip()
+                            nome = str(row.get('nome', '')).strip()
+                            data = str(row.get('data', '')).strip()
+                            telefone = str(row.get('telefone', '')).strip()
+                            responsavel = str(row.get('responsavel', '')).strip()
+                            turma = str(row.get('turma', '')).strip()
+    
+                            if not cgm or not nome:
+                                erros.append(f"CGM ou Nome ausente na linha: {row.to_dict()}")
+                                continue
+    
+                            aluno = {
+                                "cgm": cgm,
+                                "nome": nome,
+                                "data": data,
+                                "telefone": telefone,
+                                "responsavel": responsavel,
+                                "turma": turma
+                            }
+    
+                            db.alunos.update_one({"cgm": cgm}, {"$set": aluno}, upsert=True)
+                            total_importados += 1
+    
+                        except Exception as e:
+                            erros.append(f"Erro na linha {row.to_dict()} → {e}")
+    
+                    st.success(f"✅ Importação finalizada. Total importado/atualizado: {total_importados}")
+                    if erros:
+                        st.warning("⚠️ Erros encontrados:")
+                        for erro in erros:
+                            st.error(erro)
+    
+            except Exception as e:
+                st.error(f"Erro ao ler o arquivo: {e}")
 
 #def pagina_ocorrencias():
 #    st.markdown("## 🚨 Registro de Ocorrência")
