@@ -414,164 +414,108 @@ def pagina_cadastro():
     if limpar:
         st.experimental_rerun()
 
-    # --- Importação de alunos via arquivo ---
-    st.subheader("📥 Importar Alunos via TXT ou CSV")
-    
-    arquivo = st.file_uploader(
-        "Escolha o arquivo .txt ou .csv",
-        type=["txt", "csv"]
-    )
-    
-    delimitador = st.selectbox(
-        "Escolha o delimitador",
-        [";", ",", "\\t"]
-    )
-    
-    delimitador_real = {
-        ";": ";",
-        ",": ",",
-        "\\t": "\t"
-    }[delimitador]
-    
-    if arquivo is not None:
-        try:
-            # 🔹 Leitura robusta do arquivo
-            df_import = pd.read_csv(
-                arquivo,
-                delimiter=delimitador_real,
-                dtype=str,
-                keep_default_na=False,
-                encoding="utf-8",
-                engine="python"
+    import pandas as pd
+import streamlit as st
+
+# --- Importação de alunos via arquivo ---
+st.subheader("📥 Importar Alunos (TXT / CSV)")
+
+arquivo = st.file_uploader(
+    "Escolha o arquivo",
+    type=["txt", "csv"]
+)
+
+if arquivo is not None:
+    try:
+        # 🔹 Leitura inteligente (detecta delimitador)
+        df_import = pd.read_csv(
+            arquivo,
+            sep=r"\t+|;|,|\s{2,}",
+            engine="python",
+            dtype=str,
+            keep_default_na=False,
+            encoding="utf-8"
+        )
+
+        # 🔹 Caso extremo: tudo veio em uma coluna só
+        if len(df_import.columns) == 1 and "\t" in df_import.columns[0]:
+            colunas = df_import.columns[0].split("\t")
+            df_import = df_import.iloc[:, 0].str.split("\t", expand=True)
+            df_import.columns = colunas
+
+        # 🔹 Normalizar colunas
+        df_import.columns = [
+            col.strip().lower()
+            for col in df_import.columns
+        ]
+
+        st.success("📄 Arquivo interpretado com sucesso")
+        st.write("Colunas detectadas:", df_import.columns.tolist())
+        st.dataframe(df_import, use_container_width=True)
+
+        # 🔹 Validação mínima
+        obrigatorias = {"cgm", "nome"}
+        if not obrigatorias.issubset(df_import.columns):
+            st.error(
+                f"❌ Colunas obrigatórias ausentes. "
+                f"Esperado: {sorted(obrigatorias)}"
             )
-    
-            # 🔹 Normalização dos nomes das colunas
-            df_import.columns = [col.strip().lower() for col in df_import.columns]
-    
-            st.success("📄 Arquivo lido com sucesso")
-            st.dataframe(df_import, use_container_width=True)
-    
-            # 🔹 Validação das colunas obrigatórias
-            colunas_obrigatorias = {"cgm", "nome"}
-            if not colunas_obrigatorias.issubset(df_import.columns):
-                st.error(
-                    f"❌ Colunas obrigatórias ausentes. "
-                    f"Esperado: {sorted(colunas_obrigatorias)} | "
-                    f"Encontrado: {list(df_import.columns)}"
-                )
-                st.stop()
-    
-            if st.button("Importar para o Sistema"):
-                erros = []
-                total_importados = 0
-    
-                for idx, row in df_import.iterrows():
-                    try:
-                        cgm = (row["cgm"] or "").strip()
-                        nome = (row["nome"] or "").strip()
-                        data = (row["data"] or "").strip() if "data" in row else ""
-                        telefone = (row["telefone"] or "").strip() if "telefone" in row else ""
-                        responsavel = (row["responsavel"] or "").strip() if "responsavel" in row else ""
-                        turma = (row["turma"] or "").strip() if "turma" in row else ""
-    
-                        # 🔸 Validação mínima
-                        if not cgm or not nome:
-                            erros.append(
-                                f"Linha {idx + 2}: CGM ou Nome ausente → {row.to_dict()}"
-                            )
-                            continue
-    
-                        aluno = {
-                            "cgm": cgm,
-                            "nome": nome,
-                            "data": data,
-                            "telefone": telefone,
-                            "responsavel": responsavel,
-                            "turma": turma
-                        }
-    
-                        db.alunos.update_one(
-                            {"cgm": cgm},
-                            {"$set": aluno},
-                            upsert=True
-                        )
-    
-                        total_importados += 1
-    
-                    except Exception as e:
+            st.stop()
+
+        # 🔘 Botão de importação
+        if st.button("🚀 Importar para o Sistema"):
+            erros = []
+            total_importados = 0
+
+            for idx, row in df_import.iterrows():
+                try:
+                    cgm = (row.get("cgm") or "").strip()
+                    nome = (row.get("nome") or "").strip()
+                    telefone = (row.get("telefone") or "").strip()
+                    turma = (row.get("turma") or "").strip()
+                    data = (row.get("data") or "").strip()
+                    responsavel = (row.get("responsavel") or "").strip()
+
+                    if not cgm or not nome:
                         erros.append(
-                            f"Linha {idx + 2}: Erro inesperado → {e}"
+                            f"Linha {idx + 2}: CGM ou Nome ausente → {row.to_dict()}"
                         )
-    
-                st.success(
-                    f"✅ Importação finalizada. "
-                    f"Total importado/atualizado: {total_importados}"
-                )
-    
-                if erros:
-                    st.warning("⚠️ Erros encontrados:")
-                    for erro in erros:
-                        st.error(erro)
-    
-        except Exception as e:
-            st.error(f"❌ Erro ao ler o arquivo: {e}")
+                        continue
 
+                    aluno = {
+                        "cgm": cgm,
+                        "nome": nome,
+                        "telefone": telefone,
+                        "turma": turma,
+                        "data": data,
+                        "responsavel": responsavel
+                    }
 
-def pagina_cadastro():
-    st.markdown("## ✏️ Cadastro de Alunos")
+                    db.alunos.update_one(
+                        {"cgm": cgm},
+                        {"$set": aluno},
+                        upsert=True
+                    )
 
-    # --- Lista de alunos cadastrados ---
-    alunos = list(db.alunos.find().sort("nome", 1))
+                    total_importados += 1
 
-    nomes_exibicao = [""] + [
-        f"{a['nome']} (CGM: {a['cgm']})"
-        for a in alunos
-    ]
+                except Exception as e:
+                    erros.append(
+                        f"Linha {idx + 2}: Erro inesperado → {e}"
+                    )
 
-    selecionado = st.selectbox("🔎 Buscar aluno para Alterar ou Excluir:", nomes_exibicao)
+            st.success(
+                f"✅ Importação finalizada — {total_importados} registros processados"
+            )
 
-    aluno_carregado = None
-    if selecionado and selecionado != "":
-        # Extrai CGM do texto selecionado
-        cgm_busca = selecionado.split("CGM:")[1].replace(")", "").strip()
-        aluno_carregado = db.alunos.find_one({"cgm": cgm_busca})
+            if erros:
+                st.warning("⚠️ Erros encontrados:")
+                for erro in erros:
+                    st.error(erro)
 
-        st.success(f"Aluno carregado: {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})")
+    except Exception as e:
+        st.error(f"❌ Falha ao processar o arquivo: {e}")
 
-    # --- Formulário de Cadastro ou Alteração ---
-    with st.form("form_cadastro"):
-
-        cgm = st.text_input("CGM", value=aluno_carregado["cgm"] if aluno_carregado else "")
-        nome = st.text_input("Nome", value=aluno_carregado["nome"] if aluno_carregado else "")
-        data = st.date_input("Data de Nascimento",
-                             value=pd.to_datetime(aluno_carregado["data"]).date()
-                             if aluno_carregado and aluno_carregado.get("data") else datetime.now().date())
-        telefone = st.text_input("Telefone", value=aluno_carregado["telefone"] if aluno_carregado else "")
-        responsavel = st.text_input("Responsável", value=aluno_carregado["responsavel"] if aluno_carregado else "")
-        turma = st.text_input("Turma", value=aluno_carregado["turma"] if aluno_carregado else "")
-
-        col1, col2, col3 = st.columns([1,1,1])
-        salvar = col1.form_submit_button("💾 Salvar / Alterar")
-        excluir = col2.form_submit_button("🗑️ Excluir")
-        limpar = col3.form_submit_button("🧹 Limpar")
-
-    # --- Ações após clique ---
-    if salvar:
-        if cgm and nome:
-            db.alunos.update_one({"cgm": cgm}, {
-                "$set": {
-                    "cgm": cgm,
-                    "nome": nome,
-                    "data": str(data),
-                    "telefone": telefone,
-                    "responsavel": responsavel,
-                    "turma": turma
-                }
-            }, upsert=True)
-            st.success("✅ Aluno salvo ou atualizado com sucesso!")
-            st.experimental_rerun()
-        else:
-            st.error("Preencha todos os campos obrigatórios.")
 
     if excluir and aluno_carregado:
         confirmacao = st.warning(f"Tem certeza que deseja excluir o aluno {aluno_carregado['nome']} (CGM {aluno_carregado['cgm']})?")
