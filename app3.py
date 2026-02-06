@@ -414,107 +414,107 @@ def pagina_cadastro():
     if limpar:
         st.experimental_rerun()
 
-# --- Importação de alunos via arquivo ---
-st.subheader("📥 Importar Alunos via TXT ou CSV")
-
-arquivo = st.file_uploader(
-    "Escolha o arquivo .txt ou .csv",
-    type=["txt", "csv"]
-)
-
-delimitador = st.selectbox(
-    "Escolha o delimitador",
-    [";", ",", "\\t"]
-)
-
-delimitador_real = {
-    ";": ";",
-    ",": ",",
-    "\\t": "\t"
-}[delimitador]
-
-if arquivo is not None:
-    try:
-        # 🔹 Leitura robusta do arquivo
-        df_import = pd.read_csv(
-            arquivo,
-            delimiter=delimitador_real,
-            dtype=str,
-            keep_default_na=False,
-            encoding="utf-8",
-            engine="python"
-        )
-
-        # 🔹 Normalização dos nomes das colunas
-        df_import.columns = [col.strip().lower() for col in df_import.columns]
-
-        st.success("📄 Arquivo lido com sucesso")
-        st.dataframe(df_import, use_container_width=True)
-
-        # 🔹 Validação das colunas obrigatórias
-        colunas_obrigatorias = {"cgm", "nome"}
-        if not colunas_obrigatorias.issubset(df_import.columns):
-            st.error(
-                f"❌ Colunas obrigatórias ausentes. "
-                f"Esperado: {sorted(colunas_obrigatorias)} | "
-                f"Encontrado: {list(df_import.columns)}"
+    # --- Importação de alunos via arquivo ---
+    st.subheader("📥 Importar Alunos via TXT ou CSV")
+    
+    arquivo = st.file_uploader(
+        "Escolha o arquivo .txt ou .csv",
+        type=["txt", "csv"]
+    )
+    
+    delimitador = st.selectbox(
+        "Escolha o delimitador",
+        [";", ",", "\\t"]
+    )
+    
+    delimitador_real = {
+        ";": ";",
+        ",": ",",
+        "\\t": "\t"
+    }[delimitador]
+    
+    if arquivo is not None:
+        try:
+            # 🔹 Leitura robusta do arquivo
+            df_import = pd.read_csv(
+                arquivo,
+                delimiter=delimitador_real,
+                dtype=str,
+                keep_default_na=False,
+                encoding="utf-8",
+                engine="python"
             )
-            st.stop()
-
-        if st.button("Importar para o Sistema"):
-            erros = []
-            total_importados = 0
-
-            for idx, row in df_import.iterrows():
-                try:
-                    cgm = (row["cgm"] or "").strip()
-                    nome = (row["nome"] or "").strip()
-                    data = (row["data"] or "").strip() if "data" in row else ""
-                    telefone = (row["telefone"] or "").strip() if "telefone" in row else ""
-                    responsavel = (row["responsavel"] or "").strip() if "responsavel" in row else ""
-                    turma = (row["turma"] or "").strip() if "turma" in row else ""
-
-                    # 🔸 Validação mínima
-                    if not cgm or not nome:
-                        erros.append(
-                            f"Linha {idx + 2}: CGM ou Nome ausente → {row.to_dict()}"
+    
+            # 🔹 Normalização dos nomes das colunas
+            df_import.columns = [col.strip().lower() for col in df_import.columns]
+    
+            st.success("📄 Arquivo lido com sucesso")
+            st.dataframe(df_import, use_container_width=True)
+    
+            # 🔹 Validação das colunas obrigatórias
+            colunas_obrigatorias = {"cgm", "nome"}
+            if not colunas_obrigatorias.issubset(df_import.columns):
+                st.error(
+                    f"❌ Colunas obrigatórias ausentes. "
+                    f"Esperado: {sorted(colunas_obrigatorias)} | "
+                    f"Encontrado: {list(df_import.columns)}"
+                )
+                st.stop()
+    
+            if st.button("Importar para o Sistema"):
+                erros = []
+                total_importados = 0
+    
+                for idx, row in df_import.iterrows():
+                    try:
+                        cgm = (row["cgm"] or "").strip()
+                        nome = (row["nome"] or "").strip()
+                        data = (row["data"] or "").strip() if "data" in row else ""
+                        telefone = (row["telefone"] or "").strip() if "telefone" in row else ""
+                        responsavel = (row["responsavel"] or "").strip() if "responsavel" in row else ""
+                        turma = (row["turma"] or "").strip() if "turma" in row else ""
+    
+                        # 🔸 Validação mínima
+                        if not cgm or not nome:
+                            erros.append(
+                                f"Linha {idx + 2}: CGM ou Nome ausente → {row.to_dict()}"
+                            )
+                            continue
+    
+                        aluno = {
+                            "cgm": cgm,
+                            "nome": nome,
+                            "data": data,
+                            "telefone": telefone,
+                            "responsavel": responsavel,
+                            "turma": turma
+                        }
+    
+                        db.alunos.update_one(
+                            {"cgm": cgm},
+                            {"$set": aluno},
+                            upsert=True
                         )
-                        continue
-
-                    aluno = {
-                        "cgm": cgm,
-                        "nome": nome,
-                        "data": data,
-                        "telefone": telefone,
-                        "responsavel": responsavel,
-                        "turma": turma
-                    }
-
-                    db.alunos.update_one(
-                        {"cgm": cgm},
-                        {"$set": aluno},
-                        upsert=True
-                    )
-
-                    total_importados += 1
-
-                except Exception as e:
-                    erros.append(
-                        f"Linha {idx + 2}: Erro inesperado → {e}"
-                    )
-
-            st.success(
-                f"✅ Importação finalizada. "
-                f"Total importado/atualizado: {total_importados}"
-            )
-
-            if erros:
-                st.warning("⚠️ Erros encontrados:")
-                for erro in erros:
-                    st.error(erro)
-
-    except Exception as e:
-        st.error(f"❌ Erro ao ler o arquivo: {e}")
+    
+                        total_importados += 1
+    
+                    except Exception as e:
+                        erros.append(
+                            f"Linha {idx + 2}: Erro inesperado → {e}"
+                        )
+    
+                st.success(
+                    f"✅ Importação finalizada. "
+                    f"Total importado/atualizado: {total_importados}"
+                )
+    
+                if erros:
+                    st.warning("⚠️ Erros encontrados:")
+                    for erro in erros:
+                        st.error(erro)
+    
+        except Exception as e:
+            st.error(f"❌ Erro ao ler o arquivo: {e}")
 
 
 def pagina_cadastro():
