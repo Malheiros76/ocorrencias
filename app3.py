@@ -569,7 +569,7 @@ def pagina_exportar():
         else:
             st.warning("Nenhuma ocorrência no período informado.")
 
-    # Agrupar por aluno e exibir relatórios individuais
+       # Agrupar por aluno e exibir relatórios individuais
     ocorrencias_por_aluno = {}
     for ocorr in resultados:
         nome = ocorr.get("nome", "")
@@ -579,9 +579,11 @@ def pagina_exportar():
 
     for nome, lista in sorted(ocorrencias_por_aluno.items()):
         with st.expander(f"📄 Relatório de {nome}"):
+
             telefone = lista[0].get("telefone", "")
+
             for ocorr in lista:
-                st.write(f"📅 {ocorr['data']} - 📝 {ocorr['descricao']}")
+                st.write(f"📅 {ocorr.get('data','')} - 📝 {ocorr.get('descricao','')}")
 
             mensagem = formatar_mensagem_whatsapp(lista, nome)
             st.text_area("📋 WhatsApp", mensagem, height=200, key=f"txt_msg_{nome}")
@@ -591,42 +593,31 @@ def pagina_exportar():
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-            import io
+            # ==============================
+            # BOTÕES EXPORTAÇÃO OTIMIZADOS
+            # ==============================
 
-# Botões exportação individual
-col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-# ==============================
-# GERAR DOCX OTIMIZADO
-# ==============================
-if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
+            with col1:
+                arquivo_word = exportar_ocorrencias_para_word_bytes(lista)
+                st.download_button(
+                    label=f"📄 Baixar DOCX - {nome}",
+                    data=arquivo_word,
+                    file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"download_word_{nome}"
+                )
 
-    arquivo_bytes = exportar_ocorrencias_para_word_bytes(lista)
-
-    st.download_button(
-        label="📥 Baixar DOCX",
-        data=arquivo_bytes,
-        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        key=f"download_word_{nome}"
-    )
-
-
-# ==============================
-# GERAR PDF OTIMIZADO
-# ==============================
-if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
-
-    arquivo_bytes = exportar_ocorrencias_para_pdf_bytes(lista)
-
-    st.download_button(
-        label="📥 Baixar PDF",
-        data=arquivo_bytes,
-        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
-        mime="application/pdf",
-        key=f"download_pdf_{nome}"
-    )
-
+            with col2:
+                arquivo_pdf = exportar_ocorrencias_para_pdf_bytes(lista)
+                st.download_button(
+                    label=f"🧾 Baixar PDF - {nome}",
+                    data=arquivo_pdf,
+                    file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                    mime="application/pdf",
+                    key=f"download_pdf_{nome}"
+                )
 
 # --- Lista de Alunos ---
 def pagina_lista():
