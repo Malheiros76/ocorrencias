@@ -472,158 +472,140 @@ def pagina_ocorrencias():
                             st.success("🗑️ Ocorrência excluída com sucesso!")
                             st.experimental_rerun()
 
-def pagina_exportar():
-    import urllib
-    import uuid
+# ================= EXPORT =================
+def exportar_word(lista):
+    buffer = io.BytesIO()
+    doc = Document()
+    doc.add_heading("RELATÓRIO DE OCORRÊNCIAS", level=1)
 
+    for o in lista:
+        doc.add_paragraph(f"Data: {o.get('data','')}")
+        doc.add_paragraph(f"Descrição: {o.get('descricao','')}")
+        doc.add_paragraph("-" * 40)
+
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+def exportar_pdf(lista):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph("RELATÓRIO DE OCORRÊNCIAS", styles["Heading1"]))
+    elements.append(Spacer(1, 12))
+
+    for o in lista:
+        texto = f"Data: {o.get('data','')}<br/>Descrição: {o.get('descricao','')}"
+        elements.append(Paragraph(texto, styles["Normal"]))
+        elements.append(Spacer(1, 10))
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+# ================= WHATSAPP =================
+@st.cache_data(ttl=300)
+def gerar_msg_cache(lista_serializada, nome):
+    msg = f"📋 RELATÓRIO DE OCORRÊNCIAS\nAluno: {nome}\n\n"
+    for i, o in enumerate(lista_serializada, 1):
+        msg += f"{i}) {o[0]} - {o[1]}\n"
+    return msg
+
+# ================= PÁGINA EXPORTAR =================
+def pagina_exportar():
     st.markdown("## 📥 Exportar Relatórios")
 
-    total = db.ocorrencias.count_documents({})
-    if total == 0:
-        st.warning("Nenhuma ocorrência encontrada.")
-        return
-
-    # ===================== BUSCA POR CGM =====================
+    # ===== BUSCAR POR CGM =====
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
-    col1, col2 = st.columns(2)
 
-    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-        dados = list(
-            db.ocorrencias.find(
-                {"cgm": cgm_input},
-                {"_id": 0}
-            ).limit(1000)
-        )
+    if st.button("Buscar", key="buscar_cgm") and cgm_input:
+        dados = buscar_por_cgm(cgm_input)
 
         if dados:
-            arquivo = exportar_ocorrencias_para_word(dados)
-            st.download_button(
-                "📥 Baixar Word",
-                arquivo,
-                file_name=f"ocorrencias_{cgm_input}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+            st.success(f"{len(dados)} ocorrência(s) encontrada(s)")
+
+            col1, col2 = st.columns(2)
+
+            if col1.button("📄 Gerar DOCX"):
+                with st.spinner("Gerando..."):
+                    arquivo = exportar_word(dados)
+                st.download_button("Baixar DOCX", arquivo,
+                    file_name=f"ocorrencias_{cgm_input}.docx")
+
+            if col2.button("🧾 Gerar PDF"):
+                with st.spinner("Gerando..."):
+                    arquivo = exportar_pdf(dados)
+                st.download_button("Baixar PDF", arquivo,
+                    file_name=f"ocorrencias_{cgm_input}.pdf")
         else:
-            st.warning("Nenhuma ocorrência encontrada para esse CGM.")
+            st.warning("Nenhuma ocorrência encontrada.")
 
-    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
-        dados = list(
-            db.ocorrencias.find(
-                {"cgm": cgm_input},
-                {"_id": 0}
-            ).limit(1000)
-        )
-
-        if dados:
-            arquivo = exportar_ocorrencias_para_pdf(dados)
-            st.download_button(
-                "📥 Baixar PDF",
-                arquivo,
-                file_name=f"ocorrencias_{cgm_input}.pdf",
-                mime="application/pdf"
-            )
-        else:
-            st.warning("Nenhuma ocorrência encontrada para esse CGM.")
-
-    # ===================== PERÍODO =====================
-    st.subheader("📅 Exportar por Período")
-
-    uid = str(uuid.uuid4())
-    data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
-    data_fim = st.date_input("Data final", key=f"fim_{uid}")
-
-    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
-
-        inicio = data_inicio.strftime("%Y-%m-%d")
-        fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
-
-        dados = list(
-            db.ocorrencias.find(
-                {"data": {"$gte": inicio, "$lte": fim}},
-                {"_id": 0}
-            ).limit(2000)
-        )
-
-        if dados:
-            arquivo_word = exportar_ocorrencias_para_word(dados)
-            st.download_button(
-                "📥 Baixar DOCX",
-                arquivo_word,
-                file_name="relatorio_periodo.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-
-            arquivo_pdf = exportar_ocorrencias_para_pdf(dados)
-            st.download_button(
-                "📥 Baixar PDF",
-                arquivo_pdf,
-                file_name="relatorio_periodo.pdf",
-                mime="application/pdf"
-            )
-        else:
-            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
-
-    # ===================== AGRUPADO POR ALUNO =====================
+    # ===== RELATÓRIO INDIVIDUAL SOB DEMANDA =====
     st.subheader("📄 Relatórios Individuais por Aluno")
 
-    ocorrencias_por_aluno = {}
+    alunos = listar_alunos()
 
-    cursor = db.ocorrencias.find(
-        {},
-        {"nome": 1, "telefone": 1, "data": 1, "descricao": 1}
-    ).limit(2000)
+    for aluno in alunos:
+        nome = aluno["nome"]
 
-    for ocorr in cursor:
-        nome = ocorr.get("nome", "Sem Nome")
-        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
+        with st.expander(f"📄 {nome}"):
 
-    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+            total = contar_ocorrencias(nome)
 
-        unique_key = f"{nome}_{uuid.uuid4()}"
+            if total == 0:
+                st.info("Nenhuma ocorrência.")
+                continue
 
-        with st.expander(f"📄 Relatório de {nome}"):
+            page_size = 30
+            paginas = max(1, (total // page_size) + (1 if total % page_size else 0))
 
-            telefone = lista[0].get("telefone", "")
-
-            for ocorr in lista:
-                st.write(
-                    f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}"
-                )
-
-            mensagem = formatar_mensagem_whatsapp(lista, nome)
-
-            st.text_area(
-                "📋 WhatsApp",
-                mensagem,
-                height=200,
-                key=f"msg_{unique_key}"
+            pagina = st.number_input(
+                "Página",
+                min_value=1,
+                max_value=paginas,
+                value=1,
+                key=f"page_{nome}"
             )
 
+            skip = (pagina - 1) * page_size
+            dados = buscar_ocorrencias_paginadas(nome, skip, page_size)
+
+            for o in dados:
+                st.write(f"{o['data']} - {o['descricao']}")
+
+            telefone = dados[0]["telefone"] if dados else ""
+
+            lista_serializada = tuple((o["data"], o["descricao"]) for o in dados)
+            mensagem = gerar_msg_cache(lista_serializada, nome)
+
+            st.text_area("WhatsApp", mensagem, height=200)
+
             if telefone:
-                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                numero = ''.join(filter(str.isdigit, telefone))
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
             col1, col2 = st.columns(2)
 
-            if col1.button("📄 Gerar DOCX", key=f"doc_{unique_key}"):
-                arquivo_word = exportar_ocorrencias_para_word(lista)
-                st.download_button(
-                    "📥 Baixar DOCX",
-                    arquivo_word,
-                    file_name=f"relatorio_{nome.replace(' ','_')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+            if col1.button("📄 DOCX", key=f"doc_{nome}"):
+                with st.spinner("Gerando..."):
+                    todas = buscar_ocorrencias_paginadas(nome, 0, total)
+                    arquivo = exportar_word(todas)
+                st.download_button("Baixar DOCX", arquivo,
+                    file_name=f"{nome}.docx",
+                    key=f"down_doc_{nome}")
 
-            if col2.button("🧾 Gerar PDF", key=f"pdf_{unique_key}"):
-                arquivo_pdf = exportar_ocorrencias_para_pdf(lista)
-                st.download_button(
-                    "📥 Baixar PDF",
-                    arquivo_pdf,
-                    file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
-                    mime="application/pdf"
-                )
+            if col2.button("🧾 PDF", key=f"pdf_{nome}"):
+                with st.spinner("Gerando..."):
+                    todas = buscar_ocorrencias_paginadas(nome, 0, total)
+                    arquivo = exportar_pdf(todas)
+                st.download_button("Baixar PDF", arquivo,
+                    file_name=f"{nome}.pdf",
+                    key=f"down_pdf_{nome}")
+
 
 # --- Lista de Alunos ---
 def pagina_lista():
