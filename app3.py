@@ -470,7 +470,7 @@ def pagina_exportar():
 
 
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
-    dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
     if dados:
         arquivo = exportar_ocorrencias_para_pdf(dados)
         st.download_button(
