@@ -57,10 +57,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def agora_local():
-    tz = pytz.timezone("America/Sao_Paulo")
-    return datetime.now(tz)
-    
 # --- Conexão com MongoDB ---
 @st.cache_resource
 def conectar():
@@ -70,9 +66,11 @@ def conectar():
 
     # 🔒 Criar índices se não existirem (seguro em produção)
     try:
-        db.ocorrencias.create_index("cgm")
+        db.ocorrencias.create_index([("cgm", 1), ("data", -1)])
+        db.ocorrencias.create_index([("nome", 1), ("data", -1)])
         db.ocorrencias.create_index("data")
         db.alunos.create_index("cgm")
+        db.alunos.create_index("nome")
     except Exception:
         pass  # evita quebrar produção caso já existam
 
@@ -82,6 +80,42 @@ db = conectar()
 
 print("--- Coleções no banco 'escola' ---")
 
+# ================= UTIL =================
+def agora_local():
+    tz = pytz.timezone("America/Sao_Paulo")
+    return datetime.now(tz)
+
+# ================= BUSCAS =================
+@st.cache_data(ttl=120)
+def buscar_por_cgm(cgm):
+    return list(
+        db.ocorrencias.find(
+            {"cgm": cgm},
+            {"_id": 0, "nome": 1, "telefone": 1, "data": 1, "descricao": 1}
+        ).sort("data", -1)
+    )
+
+@st.cache_data(ttl=120)
+def listar_alunos():
+    return list(
+        db.alunos.find({}, {"_id": 0, "nome": 1}).sort("nome", 1)
+    )
+
+@st.cache_data(ttl=60)
+def contar_ocorrencias(nome):
+    return db.ocorrencias.count_documents({"nome": nome})
+
+@st.cache_data(ttl=60)
+def buscar_ocorrencias_paginadas(nome, skip, limit):
+    return list(
+        db.ocorrencias.find(
+            {"nome": nome},
+            {"_id": 0, "data": 1, "descricao": 1, "telefone": 1}
+        )
+        .sort("data", -1)
+        .skip(skip)
+        .limit(limit)
+    )
 # --- Funções auxiliares ---
 from datetime import datetime
 import pandas as pd
