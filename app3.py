@@ -448,37 +448,33 @@ def pagina_exportar():
     if total == 0:
         st.warning("Nenhuma ocorrência encontrada.")
         return
-    if not resultados:
-        st.warning("Nenhuma ocorrência encontrada.")
-        return
-
+   
     # ===================== BUSCA POR CGM =====================
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
     col1, col2 = st.columns(2)
 
     if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-        dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
-    if dados:
-        arquivo = exportar_ocorrencias_para_word(dados)
-        st.download_button(
-            "📥 Baixar Word",
-            arquivo,
-            file_name=f"ocorrencias_{cgm_input}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-
+    	dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
+    		if dados:
+    			arquivo = exportar_ocorrencias_para_word(dados)
+    			st.download_button(
+    			"📥 Baixar Word",
+    			arquivo,
+    			file_name=f"ocorrencias_{cgm_input}.docx",
+    			mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    			)
 
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
-        dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
-    if dados:
-        arquivo = exportar_ocorrencias_para_pdf(dados)
-        st.download_button(
-            "📥 Baixar PDF",
-            arquivo,
-            file_name=f"ocorrencias_{cgm_input}.pdf",
-            mime="application/pdf"
-        )
+    	dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
+    		if dados:
+        		arquivo = exportar_ocorrencias_para_pdf(dados)
+        		st.download_button(
+            		"📥 Baixar PDF",
+            		arquivo,
+            		file_name=f"ocorrencias_{cgm_input}.pdf",
+            		mime="application/pdf"
+        		)
 
     # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
@@ -513,10 +509,16 @@ def pagina_exportar():
     # ===================== AGRUPADO POR ALUNO =====================
     st.subheader("📄 Relatórios Individuais por Aluno")
 
-    ocorrencias_por_aluno = {}
-    for ocorr in resultados:
-        nome = ocorr.get("nome", "")
-        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
+   ocorrencias_por_aluno = {}
+
+   cursor = db.ocorrencias.find(
+       {}, 
+       {"_id": 0, "nome": 1, "telefone": 1, "data": 1, "descricao": 1}
+).limit(2000)
+
+   for ocorr in cursor:
+       nome = ocorr.get("nome", "")
+       ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
 
     for nome, lista in sorted(ocorrencias_por_aluno.items()):
         with st.expander(f"📄 Relatório de {nome}"):
