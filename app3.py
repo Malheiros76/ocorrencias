@@ -458,7 +458,7 @@ def pagina_exportar():
     col1, col2 = st.columns(2)
 
     if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-    dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
     if dados:
         arquivo = exportar_ocorrencias_para_word(dados)
         st.download_button(
