@@ -456,25 +456,25 @@ def pagina_exportar():
 
     if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
     	dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
-    		if dados:
-    			arquivo = exportar_ocorrencias_para_word(dados)
-    			st.download_button(
-    			"📥 Baixar Word",
-    			arquivo,
-    			file_name=f"ocorrencias_{cgm_input}.docx",
-    			mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    			)
+    	if dados:
+            arquivo = exportar_ocorrencias_para_word(dados)
+			st.download_button(
+    		"📥 Baixar Word",
+    		arquivo,
+    		file_name=f"ocorrencias_{cgm_input}.docx",
+    		mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    		)
 
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
     	dados = list(db.ocorrencias.find({"cgm": cgm_input}, {"_id": 0}).limit(1000))
-    		if dados:
-        		arquivo = exportar_ocorrencias_para_pdf(dados)
-        		st.download_button(
-            		"📥 Baixar PDF",
-            		arquivo,
-            		file_name=f"ocorrencias_{cgm_input}.pdf",
-            		mime="application/pdf"
-        		)
+    	if dados:
+        	arquivo = exportar_ocorrencias_para_pdf(dados)
+        	st.download_button(
+        	"📥 Baixar PDF",
+        	arquivo,
+        	file_name=f"ocorrencias_{cgm_input}.pdf",
+        	mime="application/pdf"
+        	)
 
     # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
