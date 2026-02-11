@@ -165,74 +165,50 @@ Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
     return msg
 
 # --- Funções para exportar ---
-def exportar_ocorrencias_para_word(lista, filename="relatorio.docx"):
-    from docx import Document
-    from docx.shared import Inches
+from docx import Document
+import io
 
+def exportar_ocorrencias_para_word_bytes(ocorrencias):
     doc = Document()
+    doc.add_heading("Relatório Individual de Ocorrências", level=1)
 
-    # Cabeçalho com imagem
-    try:
-        doc.add_picture("CABECARIOAPP.png", width=Inches(6.0))
-    except:
-        doc.add_heading("Relatório de Ocorrências", 0)
-
-    for ocorr in lista:
-        doc.add_paragraph(f"\nNome do Aluno: {ocorr.get('nome', '')}")
-        doc.add_paragraph(f"CGM: {ocorr.get('cgm', '')}")
-        doc.add_paragraph(f"Turma: {ocorr.get('turma', '')}")
-        doc.add_paragraph(f"Telefone: {ocorr.get('telefone', '')}")
-        doc.add_paragraph(f"Data da Ocorrência: {ocorr.get('data', '')}")
-        doc.add_paragraph(f"Descrição: {ocorr.get('descricao', '')}")
+    for o in ocorrencias:
+        doc.add_paragraph(f"Data: {o.get('data','')}")
+        doc.add_paragraph(f"Descrição: {o.get('descricao','')}")
         doc.add_paragraph("-" * 50)
 
-    doc.add_paragraph("\n\n" + "_" * 30 + "                      " + "_" * 30)
-    doc.add_paragraph("Assinatura do Funcionário                Assinatura do Responsável")
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
 
-    doc.save(filename)
-    return filename
+    return buffer
 
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+import io
 
-def exportar_ocorrencias_para_pdf(lista, filename="relatorio.pdf"):
-    from fpdf import FPDF
-    import os
+def exportar_ocorrencias_para_pdf_bytes(ocorrencias):
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer)
+    elements = []
+    styles = getSampleStyleSheet()
 
-    # Cabeçalho com imagem
-    if os.path.exists("CABECARIOAPP.png"):
-        pdf.image("CABECARIOAPP.png", x=10, y=8, w=190)
-        pdf.ln(35)
-    else:
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, txt="Relatório de Ocorrências", ln=True, align='C')
+    elements.append(Paragraph("Relatório Individual de Ocorrências", styles["Heading1"]))
+    elements.append(Spacer(1, 0.3 * inch))
 
-    pdf.set_font("Arial", size=12)
+    for o in ocorrencias:
+        elements.append(Paragraph(f"<b>Data:</b> {o.get('data','')}", styles["Normal"]))
+        elements.append(Paragraph(f"<b>Descrição:</b> {o.get('descricao','')}", styles["Normal"]))
+        elements.append(Spacer(1, 0.2 * inch))
 
-    for ocorr in lista:
-        pdf.ln(10)
-        pdf.set_font("Arial", 'B', 12)
-        pdf.cell(0, 10, f"Aluno: {ocorr.get('nome', '')}", ln=True)
-        pdf.set_font("Arial", size=11)
-        pdf.cell(0, 10, f"CGM: {ocorr.get('cgm', '')}", ln=True)
-        pdf.cell(0, 10, f"Turma: {ocorr.get('turma', '')}", ln=True)
-        pdf.cell(0, 10, f"Telefone: {ocorr.get('telefone', '')}", ln=True)
-        pdf.cell(0, 10, f"Data: {ocorr.get('data', '')}", ln=True)
-        pdf.multi_cell(0, 10, f"Descrição: {ocorr.get('descricao', '')}")
-        pdf.cell(0, 10, "-" * 70, ln=True)
+    doc.build(elements)
+    buffer.seek(0)
 
-    pdf.ln(20)
-    pdf.cell(90, 10, "_________________________", 0, 0, "C")
-    pdf.cell(10)
-    pdf.cell(90, 10, "_________________________", 0, 1, "C")
-    pdf.cell(90, 10, "Funcionário", 0, 0, "C")
-    pdf.cell(10)
-    pdf.cell(90, 10, "Responsável", 0, 1, "C")
+    return buffer
 
-    pdf.output(filename)
-    return filename
 
 # --- Login ---
 def pagina_login():
@@ -615,17 +591,42 @@ def pagina_exportar():
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-            # Botões exportação individual
-            col1, col2 = st.columns(2)
-            if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
-                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar DOCX", f, file_name=f"relatorio_{nome.replace(' ','_')}.docx")
+            import io
 
-            if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
-                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
-                with open(caminho, "rb") as f:
-                    st.download_button("📥 Baixar PDF", f, file_name=f"relatorio_{nome.replace(' ','_')}.pdf")
+# Botões exportação individual
+col1, col2 = st.columns(2)
+
+# ==============================
+# GERAR DOCX OTIMIZADO
+# ==============================
+if col1.button(f"📄 Gerar DOCX - {nome}", key=f"btn_word_{nome}"):
+
+    arquivo_bytes = exportar_ocorrencias_para_word_bytes(lista)
+
+    st.download_button(
+        label="📥 Baixar DOCX",
+        data=arquivo_bytes,
+        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        key=f"download_word_{nome}"
+    )
+
+
+# ==============================
+# GERAR PDF OTIMIZADO
+# ==============================
+if col2.button(f"🧾 Gerar PDF - {nome}", key=f"btn_pdf_{nome}"):
+
+    arquivo_bytes = exportar_ocorrencias_para_pdf_bytes(lista)
+
+    st.download_button(
+        label="📥 Baixar PDF",
+        data=arquivo_bytes,
+        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+        mime="application/pdf",
+        key=f"download_pdf_{nome}"
+    )
+
 
 # --- Lista de Alunos ---
 def pagina_lista():
