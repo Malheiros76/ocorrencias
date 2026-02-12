@@ -68,8 +68,8 @@ def conectar():
     cliente = MongoClient(uri)
     return cliente["escola"]
 
-print("--- Coleções no banco 'escola' ---")
-print(db.list_collection_names())
+    print("--- Coleções no banco 'escola' ---")
+    print(db.list_collection_names())
 
 # --- Funções auxiliares ---
 from datetime import datetime
