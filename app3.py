@@ -70,9 +70,6 @@ def conectar():
 
 db = conectar()
 
-    print("--- Coleções no banco 'escola' ---")
-    print(db.list_collection_names())
-
 # --- Funções auxiliares ---
 from datetime import datetime
 import pandas as pd
