@@ -510,18 +510,22 @@ def pagina_exportar():
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
     col1, col2 = st.columns(2)
+	if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
+    	dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
-    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
-        if dados:
-            caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
-            with open(caminho, "rb") as f:
-                st.download_button(
-                    "📥 Baixar Word",
-                    f.read(),
-                    file_name=f"ocorrencias_{cgm_input}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+    		if dados:
+        		caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
+        		with open(caminho, "rb") as f:
+            			st.session_state["doc_cgm"] = f.read()
+
+	if "doc_cgm" in st.session_state:
+    	st.download_button(
+        	"📥 Baixar Word",
+        	st.session_state["doc_cgm"],
+        	file_name=f"ocorrencias_{cgm_input}.docx",
+        	mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    	)
+
 
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
