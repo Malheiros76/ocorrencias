@@ -619,42 +619,37 @@ def pagina_exportar():
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-            col1, col2 = st.columns(2)
-            doc_key = f"doc_file_{nome}"
+                col1, col2 = st.columns(2)
 
+            # ================= DOCX =================
             if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
-                caminho = exportar_ocorrencias_para_word(
+                caminho_doc = exportar_ocorrencias_para_word(
                     lista,
                     f"relatorio_{nome.replace(' ','_')}.docx"
-               )
-            with open(caminho, "rb") as f:
-                    st.session_state[doc_key] = f.read()
-
-            if doc_key in st.session_state:
-               st.download_button(
-                    "📥 Baixar DOCX",
-                    st.session_state[doc_key],
-                    file_name=f"relatorio_{nome.replace(' ','_')}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-               )
-
-            pdf_key = f"pdf_file_{nome}"
-
-            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
-                caminho = exportar_ocorrencias_para_pdf(
-                   lista,
-                   f"relatorio_{nome.replace(' ','_')}.pdf"
                 )
-            with open(caminho, "rb") as f:
-                  st.session_state[pdf_key] = f.read()
-                
-            if pdf_key in st.session_state:
-               st.download_button(
-                  "📥 Baixar PDF",
-                  st.session_state[pdf_key],
-                  file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
-                  mime="application/pdf"
-           )
+
+                with open(caminho_doc, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar DOCX",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+            # ================= PDF =================
+            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+                caminho_pdf = exportar_ocorrencias_para_pdf(
+                    lista,
+                    f"relatorio_{nome.replace(' ','_')}.pdf"
+                )
+
+                with open(caminho_pdf, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                        mime="application/pdf"
+                    )
 
 # --- Lista de Alunos ---
 def pagina_lista():
