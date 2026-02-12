@@ -248,7 +248,7 @@ def pagina_login():
 
     if st.button("Entrar"):
         senha_hash = hashlib.sha256(senha.encode()).hexdigest()
-            user = db.usuarios.find_one({
+        user = db.usuarios.find_one({
             "usuario": usuario,
             "senha": senha_hash
         })
