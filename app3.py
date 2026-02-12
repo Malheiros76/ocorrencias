@@ -126,6 +126,11 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     from datetime import datetime
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
+
+    # ✅ CRIA A PASTA TEMPORÁRIA PARA ATAS
+    pasta_ata = os.path.join(os.getcwd(), "atas_tmp")
+    os.makedirs(pasta_ata, exist_ok=True)
+
     doc = Document()
 
     # =========================
@@ -137,10 +142,13 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     header_paragraph = header.paragraphs[0]
     header_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    run = header_paragraph.add_run()
-    run.add_picture("BRASÃO.png", width=Inches(1.2))
+    if os.path.exists("BRASÃO.png"):
+        run = header_paragraph.add_run()
+        run.add_picture("BRASÃO.png", width=Inches(1.2))
 
-    header_paragraph.add_run("\nCOLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA\n")
+    header_paragraph.add_run(
+        "\nCOLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA\n"
+    )
     header_paragraph.add_run("Relatório Oficial de Ocorrências\n")
     header_paragraph.add_run(
         f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
@@ -148,7 +156,6 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
 
     doc.add_paragraph("\n")
     doc.add_heading("RELATÓRIO DE OCORRÊNCIAS", level=1)
-
 
     for i, o in enumerate(ocorrencias, start=1):
         doc.add_paragraph(f"Aluno: {o.get('nome', '')}")
@@ -159,30 +166,21 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
         ata = o.get("ata")
 
         # =========================
-        # ATA COMO ARQUIVO
+        # ATA COMO ARQUIVO BASE64
         # =========================
-        if isinstance(ata, dict):
+        if isinstance(ata, str) and ata.strip():
             try:
-                nome_ata = ata.get("nome", f"ATA_{i}")
-                conteudo = ata.get("conteudo")
+                bytes_ata = base64.b64decode(ata)
+                nome_ata = f"ATA_{i}.pdf"
+                caminho_ata = os.path.join(pasta_ata, nome_ata)
 
-                if conteudo:
-                    bytes_ata = base64.b64decode(conteudo)
-                    caminho_ata = os.path.join(pasta_ata, nome_ata)
+                with open(caminho_ata, "wb") as f:
+                    f.write(bytes_ata)
 
-                    with open(caminho_ata, "wb") as f:
-                        f.write(bytes_ata)
+                doc.add_paragraph(f"ATA anexada como arquivo: {nome_ata}")
 
-                    doc.add_paragraph(f"ATA anexada: {nome_ata}")
-
-            except Exception as e:
+            except Exception:
                 doc.add_paragraph("ATA inválida ou corrompida.")
-
-        # =========================
-        # ATA ANTIGA (TEXTO)
-        # =========================
-        elif isinstance(ata, str) and ata.strip():
-            doc.add_paragraph(f"ATA (texto): {ata}")
 
         doc.add_paragraph("-" * 40)
 
@@ -509,28 +507,39 @@ def pagina_exportar():
     # ===================== BUSCA POR CGM =====================
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
+
     col1, col2 = st.columns(2)
-	if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-    	dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
-    		if dados:
-        		caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
-        		with open(caminho, "rb") as f:
-            			st.session_state["doc_cgm"] = f.read()
-
-	if "doc_cgm" in st.session_state:
-    	st.download_button(
-        	"📥 Baixar Word",
-        	st.session_state["doc_cgm"],
-        	file_name=f"ocorrencias_{cgm_input}.docx",
-        	mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    	)
-
-
-    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
+    # -------- WORD POR CGM --------
+    if col1.button("📄 Gerar Word por CGM") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+
         if dados:
-            caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
+            caminho = exportar_ocorrencias_para_word(
+                dados,
+                f"ocorrencias_{cgm_input}.docx"
+            )
+
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar Word",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    # -------- PDF POR CGM --------
+    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+
+        if dados:
+            caminho = exportar_ocorrencias_para_pdf(
+                dados,
+                f"ocorrencias_{cgm_input}.pdf"
+            )
+
             with open(caminho, "rb") as f:
                 st.download_button(
                     "📥 Baixar PDF",
@@ -538,21 +547,32 @@ def pagina_exportar():
                     file_name=f"ocorrencias_{cgm_input}.pdf",
                     mime="application/pdf"
                 )
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
     # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
+
     uid = str(uuid.uuid4())
     data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
     data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
-    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
+    if st.button("🔎 Gerar relatório por período"):
         inicio = data_inicio.strftime("%Y-%m-%d")
         fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
 
-        dados = list(db.ocorrencias.find({"data": {"$gte": inicio, "$lte": fim}}))
+        dados = list(db.ocorrencias.find({
+            "data": {"$gte": inicio, "$lte": fim}
+        }))
+
         if dados:
-            caminho = exportar_ocorrencias_para_word(dados, "relatorio_periodo.docx")
-            with open(caminho, "rb") as f:
+            # DOCX
+            caminho_doc = exportar_ocorrencias_para_word(
+                dados,
+                "relatorio_periodo.docx"
+            )
+
+            with open(caminho_doc, "rb") as f:
                 st.download_button(
                     "📥 Baixar DOCX",
                     f.read(),
@@ -560,7 +580,12 @@ def pagina_exportar():
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
 
-            caminho_pdf = exportar_ocorrencias_para_pdf(dados, "relatorio_periodo.pdf")
+            # PDF
+            caminho_pdf = exportar_ocorrencias_para_pdf(
+                dados,
+                "relatorio_periodo.pdf"
+            )
+
             with open(caminho_pdf, "rb") as f:
                 st.download_button(
                     "📥 Baixar PDF",
@@ -568,6 +593,8 @@ def pagina_exportar():
                     file_name="relatorio_periodo.pdf",
                     mime="application/pdf"
                 )
+        else:
+            st.warning("Nenhuma ocorrência encontrada no período.")
 
     # ===================== AGRUPADO POR ALUNO =====================
     st.subheader("📄 Relatórios Individuais por Aluno")
