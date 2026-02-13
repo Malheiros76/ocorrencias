@@ -488,9 +488,6 @@ def pagina_ocorrencias():
                             st.experimental_rerun()
 
 def pagina_exportar():
-    import urllib
-    import uuid
-
     st.markdown("## 📥 Exportar Relatórios")
 
     resultados = list(db.ocorrencias.find({}))
@@ -501,19 +498,12 @@ def pagina_exportar():
     # ===================== BUSCA POR CGM =====================
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
-
     col1, col2 = st.columns(2)
 
-    # -------- WORD POR CGM --------
-    if col1.button("📄 Gerar Word por CGM") and cgm_input:
+    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
-
         if dados:
-            caminho = exportar_ocorrencias_para_word(
-                dados,
-                f"ocorrencias_{cgm_input}.docx"
-            )
-
+            caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
             with open(caminho, "rb") as f:
                 st.download_button(
                     "📥 Baixar Word",
@@ -521,19 +511,11 @@ def pagina_exportar():
                     file_name=f"ocorrencias_{cgm_input}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
-    # -------- PDF POR CGM --------
-    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
+    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
-
         if dados:
-            caminho = exportar_ocorrencias_para_pdf(
-                dados,
-                f"ocorrencias_{cgm_input}.pdf"
-            )
-
+            caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
             with open(caminho, "rb") as f:
                 st.download_button(
                     "📥 Baixar PDF",
@@ -541,40 +523,50 @@ def pagina_exportar():
                     file_name=f"ocorrencias_{cgm_input}.pdf",
                     mime="application/pdf"
                 )
-        else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
     # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
 
     uid = str(uuid.uuid4())
+
     data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
     data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
-    if st.button("🔎 Gerar relatório por período"):
-        inicio = data_inicio.strftime("%Y-%m-%d")
-        fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
+    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
+
+        if data_fim < data_inicio:
+            st.error("A data final não pode ser menor que a data inicial.")
+            st.stop()
+
+        inicio = data_inicio.strftime("%Y-%m-%d 00:00:00")
+        fim = data_fim.strftime("%Y-%m-%d 23:59:59")
 
         dados = list(db.ocorrencias.find({
-            "data": {"$gte": inicio, "$lte": fim}
+            "data": {
+                "$gte": inicio,
+                "$lte": fim
+            }
         }))
 
-        if dados:
-            # DOCX
-            caminho_doc = exportar_ocorrencias_para_word(
+        if not dados:
+            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
+        else:
+            st.success(f"{len(dados)} ocorrência(s) encontrada(s).")
+
+            caminho_docx = exportar_ocorrencias_para_word(
                 dados,
                 "relatorio_periodo.docx"
             )
 
-            with open(caminho_doc, "rb") as f:
+            with open(caminho_docx, "rb") as f:
                 st.download_button(
                     "📥 Baixar DOCX",
                     f.read(),
                     file_name="relatorio_periodo.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"download_docx_{uid}"
                 )
 
-            # PDF
             caminho_pdf = exportar_ocorrencias_para_pdf(
                 dados,
                 "relatorio_periodo.pdf"
@@ -585,10 +577,9 @@ def pagina_exportar():
                     "📥 Baixar PDF",
                     f.read(),
                     file_name="relatorio_periodo.pdf",
-                    mime="application/pdf"
+                    mime="application/pdf",
+                    key=f"download_pdf_{uid}"
                 )
-        else:
-            st.warning("Nenhuma ocorrência encontrada no período.")
 
     # ===================== AGRUPADO POR ALUNO =====================
     st.subheader("📄 Relatórios Individuais por Aluno")
@@ -608,21 +599,17 @@ def pagina_exportar():
             mensagem = formatar_mensagem_whatsapp(lista, nome)
             st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
 
+            # 🔧 CORREÇÃO: colunas criadas sempre
+            col1, col2 = st.columns(2)
+
             if telefone:
                 numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-                col1, col2 = st.columns(2)
-
-            # ================= DOCX =================
             if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
-                caminho_doc = exportar_ocorrencias_para_word(
-                    lista,
-                    f"relatorio_{nome.replace(' ','_')}.docx"
-                )
-
-                with open(caminho_doc, "rb") as f:
+                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
+                with open(caminho, "rb") as f:
                     st.download_button(
                         "📥 Baixar DOCX",
                         f.read(),
@@ -630,14 +617,9 @@ def pagina_exportar():
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
 
-            # ================= PDF =================
             if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
-                caminho_pdf = exportar_ocorrencias_para_pdf(
-                    lista,
-                    f"relatorio_{nome.replace(' ','_')}.pdf"
-                )
-
-                with open(caminho_pdf, "rb") as f:
+                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
+                with open(caminho, "rb") as f:
                     st.download_button(
                         "📥 Baixar PDF",
                         f.read(),
