@@ -57,15 +57,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-if "arquivo_exportado" not in st.session_state:
-    st.session_state["arquivo_exportado"] = None
-
-if "nome_arquivo_exportado" not in st.session_state:
-    st.session_state["nome_arquivo_exportado"] = None
-
-if "tipo_arquivo_exportado" not in st.session_state:
-    st.session_state["tipo_arquivo_exportado"] = None
-
 def agora_local():
     tz = pytz.timezone("America/Sao_Paulo")
     return datetime.now(tz)
@@ -130,16 +121,24 @@ Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
 def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     import os
     from docx import Document
-    from docx.shared import Inches
+    from docx.shared import Pt, Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from datetime import datetime
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
 
+    # ✅ CRIA A PASTA TEMPORÁRIA PARA ATAS
+    pasta_ata = os.path.join(os.getcwd(), "atas_tmp")
+    os.makedirs(pasta_ata, exist_ok=True)
+
     doc = Document()
 
-    # ================= CABEÇALHO =================
+    # =========================
+    # CABEÇALHO COM BRASÃO
+    # =========================
     section = doc.sections[0]
     header = section.header
+
     header_paragraph = header.paragraphs[0]
     header_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -152,28 +151,38 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     )
     header_paragraph.add_run("Relatório Oficial de Ocorrências\n")
     header_paragraph.add_run(
-        f"Gerado em: {agora_local().strftime('%d/%m/%Y às %H:%M')}"
+        f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
     )
 
     doc.add_paragraph("\n")
     doc.add_heading("RELATÓRIO DE OCORRÊNCIAS", level=1)
 
-    # ================= OCORRÊNCIAS =================
     for i, o in enumerate(ocorrencias, start=1):
-
-        doc.add_paragraph(f"Ocorrência {i}")
-        doc.add_paragraph(f"Aluno: {o.get('nome','')}")
-        doc.add_paragraph(f"CGM: {o.get('cgm','')}")
-        doc.add_paragraph(f"Data: {o.get('data','')}")
-        doc.add_paragraph("Descrição:")
-        doc.add_paragraph(o.get("descricao",""))
+        doc.add_paragraph(f"Aluno: {o.get('nome', '')}")
+        doc.add_paragraph(f"CGM: {o.get('cgm', '')}")
+        doc.add_paragraph(f"Data: {o.get('data', '')}")
+        doc.add_paragraph(f"Descrição: {o.get('descricao', '')}")
 
         ata = o.get("ata")
 
+        # =========================
+        # ATA COMO ARQUIVO BASE64
+        # =========================
         if isinstance(ata, str) and ata.strip():
-            doc.add_paragraph("ATA anexada ao sistema.")
+            try:
+                bytes_ata = base64.b64decode(ata)
+                nome_ata = f"ATA_{i}.pdf"
+                caminho_ata = os.path.join(pasta_ata, nome_ata)
 
-        doc.add_paragraph("-" * 60)
+                with open(caminho_ata, "wb") as f:
+                    f.write(bytes_ata)
+
+                doc.add_paragraph(f"ATA anexada como arquivo: {nome_ata}")
+
+            except Exception:
+                doc.add_paragraph("ATA inválida ou corrompida.")
+
+        doc.add_paragraph("-" * 40)
 
     doc.save(caminho)
     return caminho
@@ -181,64 +190,52 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
 def exportar_ocorrencias_para_pdf(ocorrencias, nome_arquivo):
     import os
     from reportlab.lib.pagesizes import A4
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.lib import colors
-    from reportlab.lib.units import inch
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfgen import canvas
+    from datetime import datetime
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
+    c = canvas.Canvas(caminho, pagesize=A4)
+    largura, altura = A4
 
-    doc = SimpleDocTemplate(caminho, pagesize=A4)
-    elementos = []
+    def desenhar_cabecalho():
+        # Brasão
+        if os.path.exists("BRASÃO.png"):
+            c.drawImage(
+                "BRASÃO.png",
+                40,
+                altura - 90,
+                width=60,
+                height=60,
+                preserveAspectRatio=True,
+                mask='auto'
+            )
 
-    styles = getSampleStyleSheet()
-    estilo_normal = styles["Normal"]
-    estilo_titulo = styles["Heading1"]
+        # Texto
+        c.setFont("Helvetica-Bold", 12)
+        c.drawCentredString(
+            largura / 2,
+            altura - 40,
+            "COLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA"
+        )
 
-    # ===== Logo =====
-    if os.path.exists("BRASÃO.png"):
-        img = Image("BRASÃO.png", width=1.2*inch, height=1.2*inch)
-        elementos.append(img)
-        elementos.append(Spacer(1, 12))
+        c.setFont("Helvetica", 10)
+        c.drawCentredString(
+            largura / 2,
+            altura - 55,
+            "Relatório Oficial de Ocorrências"
+        )
 
-    elementos.append(Paragraph(
-        "<b>COLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA</b>",
-        estilo_normal
-    ))
+        c.drawCentredString(
+            largura / 2,
+            altura - 70,
+            f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
+        )
 
-    elementos.append(Paragraph(
-        "Relatório Oficial de Ocorrências",
-        estilo_normal
-    ))
+        c.line(40, altura - 100, largura - 40, altura - 100)
 
-    elementos.append(Paragraph(
-        f"Gerado em: {agora_local().strftime('%d/%m/%Y às %H:%M')}",
-        estilo_normal
-    ))
+    desenhar_cabecalho()
 
-    elementos.append(Spacer(1, 20))
-    elementos.append(Paragraph("RELATÓRIO DE OCORRÊNCIAS", estilo_titulo))
-    elementos.append(Spacer(1, 20))
-
-    for i, o in enumerate(ocorrencias, start=1):
-
-        elementos.append(Paragraph(f"<b>Ocorrência {i}</b>", estilo_normal))
-        elementos.append(Paragraph(f"Aluno: {o.get('nome','')}", estilo_normal))
-        elementos.append(Paragraph(f"CGM: {o.get('cgm','')}", estilo_normal))
-        elementos.append(Paragraph(f"Data: {o.get('data','')}", estilo_normal))
-        elementos.append(Paragraph("Descrição:", estilo_normal))
-        elementos.append(Paragraph(o.get("descricao",""), estilo_normal))
-
-        if o.get("ata"):
-            elementos.append(Paragraph("ATA anexada ao sistema.", estilo_normal))
-
-        elementos.append(Spacer(1, 20))
-
-    doc.build(elementos)
-
-    return caminho
+    y = altura - 120
 
 # --- Login ---
 def pagina_login():
@@ -497,190 +494,162 @@ def pagina_ocorrencias():
                             st.experimental_rerun()
 
 def pagina_exportar():
-    import streamlit as st
-    from datetime import datetime
-    import urllib.parse
+    import urllib
+    import uuid
 
-    st.title("📤 Exportar Relatórios")
+    st.markdown("## 📥 Exportar Relatórios")
 
-    # =========================
-    # CONTROLE DE SESSION STATE
-    # =========================
-    if "arquivo_exportado" not in st.session_state:
-        st.session_state["arquivo_exportado"] = None
+    resultados = list(db.ocorrencias.find({}))
+    if not resultados:
+        st.warning("Nenhuma ocorrência encontrada.")
+        return
 
-    if "nome_arquivo_exportado" not in st.session_state:
-        st.session_state["nome_arquivo_exportado"] = None
-
-    if "tipo_arquivo_exportado" not in st.session_state:
-        st.session_state["tipo_arquivo_exportado"] = None
-
-    # =========================
-    # EXPORTAR POR CGM
-    # =========================
-    st.subheader("🔎 Exportar por CGM")
-
+    # ===================== BUSCA POR CGM =====================
+    st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
 
     col1, col2 = st.columns(2)
 
+    # -------- WORD POR CGM --------
     if col1.button("📄 Gerar Word por CGM") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
         if dados:
-            nome_arquivo = f"ocorrencias_{cgm_input}.docx"
-            caminho = exportar_ocorrencias_para_word(dados, nome_arquivo)
+            caminho = exportar_ocorrencias_para_word(
+                dados,
+                f"ocorrencias_{cgm_input}.docx"
+            )
 
             with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "docx"
+                st.download_button(
+                    "📥 Baixar Word",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
         else:
-            st.warning("Nenhuma ocorrência encontrada.")
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
+    # -------- PDF POR CGM --------
     if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
         if dados:
-            nome_arquivo = f"ocorrencias_{cgm_input}.pdf"
-            caminho = exportar_ocorrencias_para_pdf(dados, nome_arquivo)
+            caminho = exportar_ocorrencias_para_pdf(
+                dados,
+                f"ocorrencias_{cgm_input}.pdf"
+            )
 
             with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "pdf"
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.pdf",
+                    mime="application/pdf"
+                )
         else:
-            st.warning("Nenhuma ocorrência encontrada.")
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
-    st.divider()
-
-    # =========================
-    # EXPORTAR POR PERÍODO
-    # =========================
+    # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
 
-    data_inicio = st.date_input("Data inicial")
-    data_fim = st.date_input("Data final")
+    uid = str(uuid.uuid4())
+    data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
+    data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
-    col3, col4 = st.columns(2)
+    if st.button("🔎 Gerar relatório por período"):
+        inicio = data_inicio.strftime("%Y-%m-%d")
+        fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
 
-    if col3.button("📄 Gerar Word por Período"):
-        dados = list(
-            db.ocorrencias.find({
-                "data": {
-                    "$gte": data_inicio.strftime("%Y-%m-%d"),
-                    "$lte": data_fim.strftime("%Y-%m-%d"),
-                }
-            })
-        )
+        dados = list(db.ocorrencias.find({
+            "data": {"$gte": inicio, "$lte": fim}
+        }))
 
         if dados:
-            nome_arquivo = f"ocorrencias_{data_inicio}_{data_fim}.docx"
-            caminho = exportar_ocorrencias_para_word(dados, nome_arquivo)
+            # DOCX
+            caminho_doc = exportar_ocorrencias_para_word(
+                dados,
+                "relatorio_periodo.docx"
+            )
 
-            with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "docx"
+            with open(caminho_doc, "rb") as f:
+                st.download_button(
+                    "📥 Baixar DOCX",
+                    f.read(),
+                    file_name="relatorio_periodo.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+
+            # PDF
+            caminho_pdf = exportar_ocorrencias_para_pdf(
+                dados,
+                "relatorio_periodo.pdf"
+            )
+
+            with open(caminho_pdf, "rb") as f:
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name="relatorio_periodo.pdf",
+                    mime="application/pdf"
+                )
         else:
-            st.warning("Nenhuma ocorrência encontrada.")
+            st.warning("Nenhuma ocorrência encontrada no período.")
 
-    if col4.button("🧾 Gerar PDF por Período"):
-        dados = list(
-            db.ocorrencias.find({
-                "data": {
-                    "$gte": data_inicio.strftime("%Y-%m-%d"),
-                    "$lte": data_fim.strftime("%Y-%m-%d"),
-                }
-            })
-        )
+    # ===================== AGRUPADO POR ALUNO =====================
+    st.subheader("📄 Relatórios Individuais por Aluno")
 
-        if dados:
-            nome_arquivo = f"ocorrencias_{data_inicio}_{data_fim}.pdf"
-            caminho = exportar_ocorrencias_para_pdf(dados, nome_arquivo)
+    ocorrencias_por_aluno = {}
+    for ocorr in resultados:
+        nome = ocorr.get("nome", "")
+        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
 
-            with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "pdf"
-        else:
-            st.warning("Nenhuma ocorrência encontrada.")
+    for nome, lista in sorted(ocorrencias_por_aluno.items()):
+        with st.expander(f"📄 Relatório de {nome}"):
+            telefone = lista[0].get("telefone", "")
 
-    st.divider()
+            for ocorr in lista:
+                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
 
-    # =========================
-    # EXPORTAR INDIVIDUAL
-    # =========================
-    st.subheader("👨‍🎓 Exportar Individual por Aluno")
+            mensagem = formatar_mensagem_whatsapp(lista, nome)
+            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
 
-    ocorrencias = list(db.ocorrencias.find())
-    alunos_dict = {}
+            if telefone:
+                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+                st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-    for o in ocorrencias:
-        nome = o.get("nome", "Aluno")
-        alunos_dict.setdefault(nome, []).append(o)
+                col1, col2 = st.columns(2)
 
-    for nome, lista in alunos_dict.items():
-        st.markdown(f"### {nome}")
-        col1, col2 = st.columns(2)
+            # ================= DOCX =================
+            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+                caminho_doc = exportar_ocorrencias_para_word(
+                    lista,
+                    f"relatorio_{nome.replace(' ','_')}.docx"
+                )
 
-        if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
-            nome_arquivo = f"relatorio_{nome.replace(' ','_')}.docx"
-            caminho = exportar_ocorrencias_para_word(lista, nome_arquivo)
+                with open(caminho_doc, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar DOCX",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
 
-            with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "docx"
+            # ================= PDF =================
+            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+                caminho_pdf = exportar_ocorrencias_para_pdf(
+                    lista,
+                    f"relatorio_{nome.replace(' ','_')}.pdf"
+                )
 
-        if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
-            nome_arquivo = f"relatorio_{nome.replace(' ','_')}.pdf"
-            caminho = exportar_ocorrencias_para_pdf(lista, nome_arquivo)
-
-            with open(caminho, "rb") as f:
-                st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = nome_arquivo
-                st.session_state["tipo_arquivo_exportado"] = "pdf"
-
-        st.divider()
-
-    # =========================
-    # DOWNLOAD + WHATSAPP
-    # =========================
-    if st.session_state["arquivo_exportado"]:
-
-        mime = (
-            "application/pdf"
-            if st.session_state["tipo_arquivo_exportado"] == "pdf"
-            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-
-        st.success("✅ Arquivo gerado com sucesso!")
-
-        st.download_button(
-            "📥 Baixar Arquivo",
-            st.session_state["arquivo_exportado"],
-            file_name=st.session_state["nome_arquivo_exportado"],
-            mime=mime,
-        )
-
-        st.markdown("### 📲 Enviar via WhatsApp")
-
-        telefone = st.text_input("Número com DDD (somente números)")
-
-        if telefone:
-            mensagem = f"Olá! Segue o relatório {st.session_state['nome_arquivo_exportado']}."
-            mensagem_codificada = urllib.parse.quote(mensagem)
-
-            link = f"https://wa.me/55{telefone}?text={mensagem_codificada}"
-
-            st.markdown(f"[👉 Clique aqui para enviar pelo WhatsApp]({link})")
-
-        if st.button("🔄 Gerar outro relatório"):
-            st.session_state["arquivo_exportado"] = None
-            st.session_state["nome_arquivo_exportado"] = None
-            st.session_state["tipo_arquivo_exportado"] = None
-            st.rerun()
+                with open(caminho_pdf, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                        mime="application/pdf"
+                    )
 
 # --- Lista de Alunos ---
 def pagina_lista():
