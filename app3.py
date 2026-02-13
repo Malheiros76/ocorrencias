@@ -499,6 +499,7 @@ def pagina_ocorrencias():
 def pagina_exportar():
     import streamlit as st
     from datetime import datetime
+    import urllib.parse
 
     st.title("📤 Exportar Relatórios")
 
@@ -523,37 +524,33 @@ def pagina_exportar():
 
     col1, col2 = st.columns(2)
 
-    # Word por CGM
-    if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
+    if col1.button("📄 Gerar Word por CGM") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
         if dados:
-            caminho = exportar_ocorrencias_para_word(
-                dados, f"ocorrencias_{cgm_input}.docx"
-            )
+            nome_arquivo = f"ocorrencias_{cgm_input}.docx"
+            caminho = exportar_ocorrencias_para_word(dados, nome_arquivo)
 
             with open(caminho, "rb") as f:
                 st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.docx"
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
                 st.session_state["tipo_arquivo_exportado"] = "docx"
         else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+            st.warning("Nenhuma ocorrência encontrada.")
 
-    # PDF por CGM
-    if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
+    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
         dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
         if dados:
-            caminho = exportar_ocorrencias_para_pdf(
-                dados, f"ocorrencias_{cgm_input}.pdf"
-            )
+            nome_arquivo = f"ocorrencias_{cgm_input}.pdf"
+            caminho = exportar_ocorrencias_para_pdf(dados, nome_arquivo)
 
             with open(caminho, "rb") as f:
                 st.session_state["arquivo_exportado"] = f.read()
-                st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.pdf"
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
                 st.session_state["tipo_arquivo_exportado"] = "pdf"
         else:
-            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+            st.warning("Nenhuma ocorrência encontrada.")
 
     st.divider()
 
@@ -567,16 +564,14 @@ def pagina_exportar():
 
     col3, col4 = st.columns(2)
 
-    if col3.button("📄 Gerar Word por Período", key="word_periodo"):
+    if col3.button("📄 Gerar Word por Período"):
         dados = list(
-            db.ocorrencias.find(
-                {
-                    "data": {
-                        "$gte": data_inicio.strftime("%Y-%m-%d"),
-                        "$lte": data_fim.strftime("%Y-%m-%d"),
-                    }
+            db.ocorrencias.find({
+                "data": {
+                    "$gte": data_inicio.strftime("%Y-%m-%d"),
+                    "$lte": data_fim.strftime("%Y-%m-%d"),
                 }
-            )
+            })
         )
 
         if dados:
@@ -588,18 +583,16 @@ def pagina_exportar():
                 st.session_state["nome_arquivo_exportado"] = nome_arquivo
                 st.session_state["tipo_arquivo_exportado"] = "docx"
         else:
-            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
+            st.warning("Nenhuma ocorrência encontrada.")
 
-    if col4.button("🧾 Gerar PDF por Período", key="pdf_periodo"):
+    if col4.button("🧾 Gerar PDF por Período"):
         dados = list(
-            db.ocorrencias.find(
-                {
-                    "data": {
-                        "$gte": data_inicio.strftime("%Y-%m-%d"),
-                        "$lte": data_fim.strftime("%Y-%m-%d"),
-                    }
+            db.ocorrencias.find({
+                "data": {
+                    "$gte": data_inicio.strftime("%Y-%m-%d"),
+                    "$lte": data_fim.strftime("%Y-%m-%d"),
                 }
-            )
+            })
         )
 
         if dados:
@@ -611,12 +604,12 @@ def pagina_exportar():
                 st.session_state["nome_arquivo_exportado"] = nome_arquivo
                 st.session_state["tipo_arquivo_exportado"] = "pdf"
         else:
-            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
+            st.warning("Nenhuma ocorrência encontrada.")
 
     st.divider()
 
     # =========================
-    # EXPORTAR POR ALUNO
+    # EXPORTAR INDIVIDUAL
     # =========================
     st.subheader("👨‍🎓 Exportar Individual por Aluno")
 
@@ -631,7 +624,6 @@ def pagina_exportar():
         st.markdown(f"### {nome}")
         col1, col2 = st.columns(2)
 
-        # DOCX
         if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
             nome_arquivo = f"relatorio_{nome.replace(' ','_')}.docx"
             caminho = exportar_ocorrencias_para_word(lista, nome_arquivo)
@@ -641,7 +633,6 @@ def pagina_exportar():
                 st.session_state["nome_arquivo_exportado"] = nome_arquivo
                 st.session_state["tipo_arquivo_exportado"] = "docx"
 
-        # PDF
         if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
             nome_arquivo = f"relatorio_{nome.replace(' ','_')}.pdf"
             caminho = exportar_ocorrencias_para_pdf(lista, nome_arquivo)
@@ -654,7 +645,7 @@ def pagina_exportar():
         st.divider()
 
     # =========================
-    # BOTÃO FIXO DE DOWNLOAD
+    # DOWNLOAD + WHATSAPP
     # =========================
     if st.session_state["arquivo_exportado"]:
 
@@ -673,12 +664,23 @@ def pagina_exportar():
             mime=mime,
         )
 
+        st.markdown("### 📲 Enviar via WhatsApp")
+
+        telefone = st.text_input("Número com DDD (somente números)")
+
+        if telefone:
+            mensagem = f"Olá! Segue o relatório {st.session_state['nome_arquivo_exportado']}."
+            mensagem_codificada = urllib.parse.quote(mensagem)
+
+            link = f"https://wa.me/55{telefone}?text={mensagem_codificada}"
+
+            st.markdown(f"[👉 Clique aqui para enviar pelo WhatsApp]({link})")
+
         if st.button("🔄 Gerar outro relatório"):
             st.session_state["arquivo_exportado"] = None
             st.session_state["nome_arquivo_exportado"] = None
             st.session_state["tipo_arquivo_exportado"] = None
             st.rerun()
-
 
 # --- Lista de Alunos ---
 def pagina_lista():
