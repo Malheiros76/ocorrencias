@@ -596,61 +596,89 @@ def pagina_exportar():
         else:
             st.warning("Nenhuma ocorrência encontrada no período.")
 
-    # ===================== AGRUPADO POR ALUNO =====================
-    st.subheader("📄 Relatórios Individuais por Aluno")
+# ===================== AGRUPADO POR ALUNO =====================
+st.subheader("📄 Relatórios Individuais por Aluno")
 
-    ocorrencias_por_aluno = {}
-    for ocorr in resultados:
-        nome = ocorr.get("nome", "")
-        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
+ocorrencias_por_aluno = {}
+for ocorr in resultados:
+    nome = ocorr.get("nome", "")
+    ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
 
-    for nome, lista in sorted(ocorrencias_por_aluno.items()):
-        with st.expander(f"📄 Relatório de {nome}"):
-            telefone = lista[0].get("telefone", "")
+for nome, lista in sorted(ocorrencias_por_aluno.items()):
+    with st.expander(f"📄 Relatório de {nome}"):
 
-            for ocorr in lista:
-                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
+        telefone = lista[0].get("telefone", "")
 
-            mensagem = formatar_mensagem_whatsapp(lista, nome)
-            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
+        # ================= SELEÇÃO DE OCORRÊNCIAS =================
+        opcoes = []
+        mapa_ids = {}
 
-            if telefone:
-                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
-                st.markdown(f"[📱 Enviar para {telefone}]({link})")
+        for ocorr in lista:
+            texto = f"{ocorr.get('data', '')} - {ocorr.get('descricao', '')[:40]}"
+            opcoes.append(texto)
+            mapa_ids[texto] = ocorr
 
-                col1, col2 = st.columns(2)
+        selecionadas = st.multiselect(
+            "Selecione quais ocorrências deseja imprimir:",
+            opcoes,
+            default=opcoes,
+            key=f"select_{nome}"
+        )
 
-            # ================= DOCX =================
-            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+        dados_filtrados = [mapa_ids[o] for o in selecionadas]
+
+        if not dados_filtrados:
+            st.warning("Selecione pelo menos uma ocorrência.")
+            continue
+
+        # ================= WHATSAPP =================
+        mensagem = formatar_mensagem_whatsapp(dados_filtrados, nome)
+        st.text_area(
+            "📋 WhatsApp",
+            mensagem,
+            height=200,
+            key=f"msg_{nome}"
+        )
+
+        if telefone:
+            numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
+            link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
+            st.markdown(f"[📱 Enviar para {telefone}]({link})")
+
+        # ================= DOWNLOAD DIRETO =================
+        col1, col2 = st.columns(2)
+
+        # DOCX
+        with col1:
+            if st.button("📄 Baixar DOCX", key=f"doc_{nome}"):
                 caminho_doc = exportar_ocorrencias_para_word(
-                    lista,
+                    dados_filtrados,
                     f"relatorio_{nome.replace(' ','_')}.docx"
                 )
 
                 with open(caminho_doc, "rb") as f:
                     st.download_button(
-                        "📥 Baixar DOCX",
+                        "Clique para baixar",
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
 
-            # ================= PDF =================
-            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+        # PDF
+        with col2:
+            if st.button("🧾 Baixar PDF", key=f"pdf_{nome}"):
                 caminho_pdf = exportar_ocorrencias_para_pdf(
-                    lista,
+                    dados_filtrados,
                     f"relatorio_{nome.replace(' ','_')}.pdf"
                 )
 
                 with open(caminho_pdf, "rb") as f:
                     st.download_button(
-                        "📥 Baixar PDF",
+                        "Clique para baixar",
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
                         mime="application/pdf"
                     )
-
 # --- Lista de Alunos ---
 def pagina_lista():
     st.markdown("## 📄 Lista de Alunos")
