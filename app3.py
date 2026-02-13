@@ -497,37 +497,167 @@ def pagina_ocorrencias():
                             st.experimental_rerun()
 
 def pagina_exportar():
-    st.markdown("## 📥 Exportar Relatórios")
+    import streamlit as st
+    from datetime import datetime
 
-    resultados = list(db.ocorrencias.find({}))
-    if not resultados:
-        st.warning("Nenhuma ocorrência encontrada.")
-        return
+    st.title("📤 Exportar Relatórios")
 
-    # ===================== BUSCA POR CGM =====================
-    st.subheader("🔍 Buscar por CGM")
+    # =========================
+    # CONTROLE DE SESSION STATE
+    # =========================
+    if "arquivo_exportado" not in st.session_state:
+        st.session_state["arquivo_exportado"] = None
+
+    if "nome_arquivo_exportado" not in st.session_state:
+        st.session_state["nome_arquivo_exportado"] = None
+
+    if "tipo_arquivo_exportado" not in st.session_state:
+        st.session_state["tipo_arquivo_exportado"] = None
+
+    # =========================
+    # EXPORTAR POR CGM
+    # =========================
+    st.subheader("🔎 Exportar por CGM")
+
     cgm_input = st.text_input("Digite o CGM do aluno")
+
     col1, col2 = st.columns(2)
 
+    # Word por CGM
     if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-    dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+
         if dados:
-            caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
+            caminho = exportar_ocorrencias_para_word(
+                dados, f"ocorrencias_{cgm_input}.docx"
+            )
+
             with open(caminho, "rb") as f:
                 st.session_state["arquivo_exportado"] = f.read()
                 st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.docx"
                 st.session_state["tipo_arquivo_exportado"] = "docx"
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
 
+    # PDF por CGM
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
-    dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+
         if dados:
-            caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
+            caminho = exportar_ocorrencias_para_pdf(
+                dados, f"ocorrencias_{cgm_input}.pdf"
+            )
+
             with open(caminho, "rb") as f:
                 st.session_state["arquivo_exportado"] = f.read()
                 st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.pdf"
                 st.session_state["tipo_arquivo_exportado"] = "pdf"
-    
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    st.divider()
+
+    # =========================
+    # EXPORTAR POR PERÍODO
+    # =========================
+    st.subheader("📅 Exportar por Período")
+
+    data_inicio = st.date_input("Data inicial")
+    data_fim = st.date_input("Data final")
+
+    col3, col4 = st.columns(2)
+
+    if col3.button("📄 Gerar Word por Período", key="word_periodo"):
+        dados = list(
+            db.ocorrencias.find(
+                {
+                    "data": {
+                        "$gte": data_inicio.strftime("%Y-%m-%d"),
+                        "$lte": data_fim.strftime("%Y-%m-%d"),
+                    }
+                }
+            )
+        )
+
+        if dados:
+            nome_arquivo = f"ocorrencias_{data_inicio}_{data_fim}.docx"
+            caminho = exportar_ocorrencias_para_word(dados, nome_arquivo)
+
+            with open(caminho, "rb") as f:
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
+                st.session_state["tipo_arquivo_exportado"] = "docx"
+        else:
+            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
+
+    if col4.button("🧾 Gerar PDF por Período", key="pdf_periodo"):
+        dados = list(
+            db.ocorrencias.find(
+                {
+                    "data": {
+                        "$gte": data_inicio.strftime("%Y-%m-%d"),
+                        "$lte": data_fim.strftime("%Y-%m-%d"),
+                    }
+                }
+            )
+        )
+
+        if dados:
+            nome_arquivo = f"ocorrencias_{data_inicio}_{data_fim}.pdf"
+            caminho = exportar_ocorrencias_para_pdf(dados, nome_arquivo)
+
+            with open(caminho, "rb") as f:
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
+                st.session_state["tipo_arquivo_exportado"] = "pdf"
+        else:
+            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
+
+    st.divider()
+
+    # =========================
+    # EXPORTAR POR ALUNO
+    # =========================
+    st.subheader("👨‍🎓 Exportar Individual por Aluno")
+
+    ocorrencias = list(db.ocorrencias.find())
+    alunos_dict = {}
+
+    for o in ocorrencias:
+        nome = o.get("nome", "Aluno")
+        alunos_dict.setdefault(nome, []).append(o)
+
+    for nome, lista in alunos_dict.items():
+        st.markdown(f"### {nome}")
+        col1, col2 = st.columns(2)
+
+        # DOCX
+        if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+            nome_arquivo = f"relatorio_{nome.replace(' ','_')}.docx"
+            caminho = exportar_ocorrencias_para_word(lista, nome_arquivo)
+
+            with open(caminho, "rb") as f:
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
+                st.session_state["tipo_arquivo_exportado"] = "docx"
+
+        # PDF
+        if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+            nome_arquivo = f"relatorio_{nome.replace(' ','_')}.pdf"
+            caminho = exportar_ocorrencias_para_pdf(lista, nome_arquivo)
+
+            with open(caminho, "rb") as f:
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = nome_arquivo
+                st.session_state["tipo_arquivo_exportado"] = "pdf"
+
+        st.divider()
+
+    # =========================
+    # BOTÃO FIXO DE DOWNLOAD
+    # =========================
     if st.session_state["arquivo_exportado"]:
+
         mime = (
             "application/pdf"
             if st.session_state["tipo_arquivo_exportado"] == "pdf"
@@ -540,107 +670,14 @@ def pagina_exportar():
             "📥 Baixar Arquivo",
             st.session_state["arquivo_exportado"],
             file_name=st.session_state["nome_arquivo_exportado"],
-            mime=mime
+            mime=mime,
         )
 
-
-    # ===================== PERÍODO =====================
-    st.subheader("📅 Exportar por Período")
-
-    uid = str(uuid.uuid4())
-
-    data_inicio = st.date_input("Data inicial", key=f"ini_{uid}")
-    data_fim = st.date_input("Data final", key=f"fim_{uid}")
-
-    if st.button("🔎 Gerar relatório por período", key=f"periodo_{uid}"):
-
-        if data_fim < data_inicio:
-            st.error("A data final não pode ser menor que a data inicial.")
-            st.stop()
-
-        inicio = data_inicio.strftime("%Y-%m-%d 00:00:00")
-        fim = data_fim.strftime("%Y-%m-%d 23:59:59")
-
-        dados = list(db.ocorrencias.find({
-            "data": {
-                "$gte": inicio,
-                "$lte": fim
-            }
-        }))
-
-        if not dados:
-            st.warning("Nenhuma ocorrência encontrada no período selecionado.")
-        else:
-            st.success(f"{len(dados)} ocorrência(s) encontrada(s).")
-
-            caminho_docx = exportar_ocorrencias_para_word(
-                dados,
-                "relatorio_periodo.docx"
-            )
-
-            with open(caminho_docx, "rb") as f:
-                st.download_button(
-                    "📥 Baixar DOCX",
-                    f.read(),
-                    file_name="relatorio_periodo.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    key=f"download_docx_{uid}"
-                )
-
-            caminho_pdf = exportar_ocorrencias_para_pdf(
-                dados,
-                "relatorio_periodo.pdf"
-            )
-
-            with open(caminho_pdf, "rb") as f:
-                st.download_button(
-                    "📥 Baixar PDF",
-                    f.read(),
-                    file_name="relatorio_periodo.pdf",
-                    mime="application/pdf",
-                    key=f"download_pdf_{uid}"
-                )
-
-    # ===================== AGRUPADO POR ALUNO =====================
-    st.subheader("📄 Relatórios Individuais por Aluno")
-
-    ocorrencias_por_aluno = {}
-    for ocorr in resultados:
-        nome = ocorr.get("nome", "")
-        ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
-
-    for nome, lista in sorted(ocorrencias_por_aluno.items()):
-        with st.expander(f"📄 Relatório de {nome}"):
-            telefone = lista[0].get("telefone", "")
-
-            for ocorr in lista:
-                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
-
-            mensagem = formatar_mensagem_whatsapp(lista, nome)
-            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
-
-            # 🔧 CORREÇÃO: colunas criadas sempre
-            col1, col2 = st.columns(2)
-
-            if telefone:
-                numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
-                link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
-                st.markdown(f"[📱 Enviar para {telefone}]({link})")
-
-            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
-                caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
-                    with open(caminho, "rb") as f:
-                    st.session_state["arquivo_exportado"] = f.read()
-                    st.session_state["nome_arquivo_exportado"] = "nome_do_arquivo"
-                    st.session_state["tipo_arquivo_exportado"] = "docx"  # ou docx
-
-
-            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
-                caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
-                  with open(caminho, "rb") as f:
-                      st.session_state["arquivo_exportado"] = f.read()
-                      st.session_state["nome_arquivo_exportado"] = "nome_do_arquivo"
-                      st.session_state["tipo_arquivo_exportado"] = "pdf"  # ou docx
+        if st.button("🔄 Gerar outro relatório"):
+            st.session_state["arquivo_exportado"] = None
+            st.session_state["nome_arquivo_exportado"] = None
+            st.session_state["tipo_arquivo_exportado"] = None
+            st.rerun()
 
 
 # --- Lista de Alunos ---
