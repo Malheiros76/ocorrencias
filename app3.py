@@ -57,6 +57,15 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+if "arquivo_exportado" not in st.session_state:
+    st.session_state["arquivo_exportado"] = None
+
+if "nome_arquivo_exportado" not in st.session_state:
+    st.session_state["nome_arquivo_exportado"] = None
+
+if "tipo_arquivo_exportado" not in st.session_state:
+    st.session_state["tipo_arquivo_exportado"] = None
+
 def agora_local():
     tz = pytz.timezone("America/Sao_Paulo")
     return datetime.now(tz)
@@ -501,28 +510,39 @@ def pagina_exportar():
     col1, col2 = st.columns(2)
 
     if col1.button("📄 Gerar Word por CGM", key="word_cgm") and cgm_input:
-        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+    dados = list(db.ocorrencias.find({"cgm": cgm_input}))
         if dados:
             caminho = exportar_ocorrencias_para_word(dados, f"ocorrencias_{cgm_input}.docx")
             with open(caminho, "rb") as f:
-                st.download_button(
-                    "📥 Baixar Word",
-                    f.read(),
-                    file_name=f"ocorrencias_{cgm_input}.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.docx"
+                st.session_state["tipo_arquivo_exportado"] = "docx"
 
     if col2.button("🧾 Gerar PDF por CGM", key="pdf_cgm") and cgm_input:
-        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+    dados = list(db.ocorrencias.find({"cgm": cgm_input}))
         if dados:
             caminho = exportar_ocorrencias_para_pdf(dados, f"ocorrencias_{cgm_input}.pdf")
             with open(caminho, "rb") as f:
-                st.download_button(
-                    "📥 Baixar PDF",
-                    f.read(),
-                    file_name=f"ocorrencias_{cgm_input}.pdf",
-                    mime="application/pdf"
-                )
+                st.session_state["arquivo_exportado"] = f.read()
+                st.session_state["nome_arquivo_exportado"] = f"ocorrencias_{cgm_input}.pdf"
+                st.session_state["tipo_arquivo_exportado"] = "pdf"
+    
+    if st.session_state["arquivo_exportado"]:
+        mime = (
+            "application/pdf"
+            if st.session_state["tipo_arquivo_exportado"] == "pdf"
+            else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+
+        st.success("✅ Arquivo gerado com sucesso!")
+
+        st.download_button(
+            "📥 Baixar Arquivo",
+            st.session_state["arquivo_exportado"],
+            file_name=st.session_state["nome_arquivo_exportado"],
+            mime=mime
+        )
+
 
     # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
@@ -609,23 +629,19 @@ def pagina_exportar():
 
             if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
                 caminho = exportar_ocorrencias_para_word(lista, f"relatorio_{nome.replace(' ','_')}.docx")
-                with open(caminho, "rb") as f:
-                    st.download_button(
-                        "📥 Baixar DOCX",
-                        f.read(),
-                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
+                    with open(caminho, "rb") as f:
+                    st.session_state["arquivo_exportado"] = f.read()
+                    st.session_state["nome_arquivo_exportado"] = "nome_do_arquivo"
+                    st.session_state["tipo_arquivo_exportado"] = "docx"  # ou docx
+
 
             if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
                 caminho = exportar_ocorrencias_para_pdf(lista, f"relatorio_{nome.replace(' ','_')}.pdf")
-                with open(caminho, "rb") as f:
-                    st.download_button(
-                        "📥 Baixar PDF",
-                        f.read(),
-                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
-                        mime="application/pdf"
-                    )
+                  with open(caminho, "rb") as f:
+                      st.session_state["arquivo_exportado"] = f.read()
+                      st.session_state["nome_arquivo_exportado"] = "nome_do_arquivo"
+                      st.session_state["tipo_arquivo_exportado"] = "pdf"  # ou docx
+
 
 # --- Lista de Alunos ---
 def pagina_lista():
