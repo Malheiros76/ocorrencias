@@ -634,6 +634,7 @@ def pagina_exportar():
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        return pagina_exportar()
                     )
 
             # ================= PDF =================
@@ -649,6 +650,7 @@ def pagina_exportar():
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
                         mime="application/pdf"
+                        return pagina_exportar()
                     )
 
 # --- Lista de Alunos ---
