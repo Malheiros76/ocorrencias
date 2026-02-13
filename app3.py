@@ -634,9 +634,9 @@ def pagina_exportar():
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        return pagina_exportar()
                     )
-
+                    return pagina_exportar()
+                                
             # ================= PDF =================
             if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
                 caminho_pdf = exportar_ocorrencias_para_pdf(
@@ -650,8 +650,8 @@ def pagina_exportar():
                         f.read(),
                         file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
                         mime="application/pdf"
-                        return pagina_exportar()
                     )
+                    return pagina_exportar()
 
 # --- Lista de Alunos ---
 def pagina_lista():
