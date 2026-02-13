@@ -121,24 +121,16 @@ Este relatório foi gerado automaticamente pelo Sistema de Ocorrências."""
 def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     import os
     from docx import Document
-    from docx.shared import Pt, Inches
+    from docx.shared import Inches
     from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from datetime import datetime
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
 
-    # ✅ CRIA A PASTA TEMPORÁRIA PARA ATAS
-    pasta_ata = os.path.join(os.getcwd(), "atas_tmp")
-    os.makedirs(pasta_ata, exist_ok=True)
-
     doc = Document()
 
-    # =========================
-    # CABEÇALHO COM BRASÃO
-    # =========================
+    # ================= CABEÇALHO =================
     section = doc.sections[0]
     header = section.header
-
     header_paragraph = header.paragraphs[0]
     header_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -151,38 +143,28 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     )
     header_paragraph.add_run("Relatório Oficial de Ocorrências\n")
     header_paragraph.add_run(
-        f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
+        f"Gerado em: {agora_local().strftime('%d/%m/%Y às %H:%M')}"
     )
 
     doc.add_paragraph("\n")
     doc.add_heading("RELATÓRIO DE OCORRÊNCIAS", level=1)
 
+    # ================= OCORRÊNCIAS =================
     for i, o in enumerate(ocorrencias, start=1):
-        doc.add_paragraph(f"Aluno: {o.get('nome', '')}")
-        doc.add_paragraph(f"CGM: {o.get('cgm', '')}")
-        doc.add_paragraph(f"Data: {o.get('data', '')}")
-        doc.add_paragraph(f"Descrição: {o.get('descricao', '')}")
+
+        doc.add_paragraph(f"Ocorrência {i}")
+        doc.add_paragraph(f"Aluno: {o.get('nome','')}")
+        doc.add_paragraph(f"CGM: {o.get('cgm','')}")
+        doc.add_paragraph(f"Data: {o.get('data','')}")
+        doc.add_paragraph("Descrição:")
+        doc.add_paragraph(o.get("descricao",""))
 
         ata = o.get("ata")
 
-        # =========================
-        # ATA COMO ARQUIVO BASE64
-        # =========================
         if isinstance(ata, str) and ata.strip():
-            try:
-                bytes_ata = base64.b64decode(ata)
-                nome_ata = f"ATA_{i}.pdf"
-                caminho_ata = os.path.join(pasta_ata, nome_ata)
+            doc.add_paragraph("ATA anexada ao sistema.")
 
-                with open(caminho_ata, "wb") as f:
-                    f.write(bytes_ata)
-
-                doc.add_paragraph(f"ATA anexada como arquivo: {nome_ata}")
-
-            except Exception:
-                doc.add_paragraph("ATA inválida ou corrompida.")
-
-        doc.add_paragraph("-" * 40)
+        doc.add_paragraph("-" * 60)
 
     doc.save(caminho)
     return caminho
@@ -190,52 +172,64 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
 def exportar_ocorrencias_para_pdf(ocorrencias, nome_arquivo):
     import os
     from reportlab.lib.pagesizes import A4
-    from reportlab.pdfgen import canvas
-    from datetime import datetime
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfbase import pdfmetrics
 
     caminho = os.path.join(os.getcwd(), nome_arquivo)
-    c = canvas.Canvas(caminho, pagesize=A4)
-    largura, altura = A4
 
-    def desenhar_cabecalho():
-        # Brasão
-        if os.path.exists("BRASÃO.png"):
-            c.drawImage(
-                "BRASÃO.png",
-                40,
-                altura - 90,
-                width=60,
-                height=60,
-                preserveAspectRatio=True,
-                mask='auto'
-            )
+    doc = SimpleDocTemplate(caminho, pagesize=A4)
+    elementos = []
 
-        # Texto
-        c.setFont("Helvetica-Bold", 12)
-        c.drawCentredString(
-            largura / 2,
-            altura - 40,
-            "COLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA"
-        )
+    styles = getSampleStyleSheet()
+    estilo_normal = styles["Normal"]
+    estilo_titulo = styles["Heading1"]
 
-        c.setFont("Helvetica", 10)
-        c.drawCentredString(
-            largura / 2,
-            altura - 55,
-            "Relatório Oficial de Ocorrências"
-        )
+    # ===== Logo =====
+    if os.path.exists("BRASÃO.png"):
+        img = Image("BRASÃO.png", width=1.2*inch, height=1.2*inch)
+        elementos.append(img)
+        elementos.append(Spacer(1, 12))
 
-        c.drawCentredString(
-            largura / 2,
-            altura - 70,
-            f"Gerado em: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"
-        )
+    elementos.append(Paragraph(
+        "<b>COLÉGIO CÍVICO MILITAR PROF. LUIZ CARLOS DE PAULA E SOUZA</b>",
+        estilo_normal
+    ))
 
-        c.line(40, altura - 100, largura - 40, altura - 100)
+    elementos.append(Paragraph(
+        "Relatório Oficial de Ocorrências",
+        estilo_normal
+    ))
 
-    desenhar_cabecalho()
+    elementos.append(Paragraph(
+        f"Gerado em: {agora_local().strftime('%d/%m/%Y às %H:%M')}",
+        estilo_normal
+    ))
 
-    y = altura - 120
+    elementos.append(Spacer(1, 20))
+    elementos.append(Paragraph("RELATÓRIO DE OCORRÊNCIAS", estilo_titulo))
+    elementos.append(Spacer(1, 20))
+
+    for i, o in enumerate(ocorrencias, start=1):
+
+        elementos.append(Paragraph(f"<b>Ocorrência {i}</b>", estilo_normal))
+        elementos.append(Paragraph(f"Aluno: {o.get('nome','')}", estilo_normal))
+        elementos.append(Paragraph(f"CGM: {o.get('cgm','')}", estilo_normal))
+        elementos.append(Paragraph(f"Data: {o.get('data','')}", estilo_normal))
+        elementos.append(Paragraph("Descrição:", estilo_normal))
+        elementos.append(Paragraph(o.get("descricao",""), estilo_normal))
+
+        if o.get("ata"):
+            elementos.append(Paragraph("ATA anexada ao sistema.", estilo_normal))
+
+        elementos.append(Spacer(1, 20))
+
+    doc.build(elementos)
+
+    return caminho
 
 # --- Login ---
 def pagina_login():
