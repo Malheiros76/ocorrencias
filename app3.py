@@ -494,9 +494,8 @@ def pagina_ocorrencias():
                             st.experimental_rerun()
 
 def pagina_exportar():
-    import urllib.parse
+    import urllib
     import uuid
-    import os
 
     st.markdown("## 📥 Exportar Relatórios")
 
@@ -505,53 +504,53 @@ def pagina_exportar():
         st.warning("Nenhuma ocorrência encontrada.")
         return
 
-    # ==========================================================
-    # 🔎 BUSCA POR CGM
-    # ==========================================================
+    # ===================== BUSCA POR CGM =====================
     st.subheader("🔍 Buscar por CGM")
     cgm_input = st.text_input("Digite o CGM do aluno")
 
     col1, col2 = st.columns(2)
 
-    with col1:
-        if st.button("📄 Gerar Word por CGM") and cgm_input:
-            dados = list(db.ocorrencias.find({"cgm": cgm_input}))
-            if dados:
-                caminho = exportar_ocorrencias_para_word(
-                    dados,
-                    f"ocorrencias_{cgm_input}.docx"
-                )
-                with open(caminho, "rb") as f:
-                    st.download_button(
-                        "⬇️ Baixar Word",
-                        f.read(),
-                        file_name=f"ocorrencias_{cgm_input}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-            else:
-                st.warning("Nenhuma ocorrência encontrada para este CGM.")
+    # -------- WORD POR CGM --------
+    if col1.button("📄 Gerar Word por CGM") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
 
-    with col2:
-        if st.button("🧾 Gerar PDF por CGM") and cgm_input:
-            dados = list(db.ocorrencias.find({"cgm": cgm_input}))
-            if dados:
-                caminho = exportar_ocorrencias_para_pdf(
-                    dados,
-                    f"ocorrencias_{cgm_input}.pdf"
-                )
-                with open(caminho, "rb") as f:
-                    st.download_button(
-                        "⬇️ Baixar PDF",
-                        f.read(),
-                        file_name=f"ocorrencias_{cgm_input}.pdf",
-                        mime="application/pdf"
-                    )
-            else:
-                st.warning("Nenhuma ocorrência encontrada para este CGM.")
+        if dados:
+            caminho = exportar_ocorrencias_para_word(
+                dados,
+                f"ocorrencias_{cgm_input}.docx"
+            )
 
-    # ==========================================================
-    # 📅 EXPORTAR POR PERÍODO
-    # ==========================================================
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar Word",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    # -------- PDF POR CGM --------
+    if col2.button("🧾 Gerar PDF por CGM") and cgm_input:
+        dados = list(db.ocorrencias.find({"cgm": cgm_input}))
+
+        if dados:
+            caminho = exportar_ocorrencias_para_pdf(
+                dados,
+                f"ocorrencias_{cgm_input}.pdf"
+            )
+
+            with open(caminho, "rb") as f:
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name=f"ocorrencias_{cgm_input}.pdf",
+                    mime="application/pdf"
+                )
+        else:
+            st.warning("Nenhuma ocorrência encontrada para este CGM.")
+
+    # ===================== PERÍODO =====================
     st.subheader("📅 Exportar por Período")
 
     uid = str(uuid.uuid4())
@@ -559,7 +558,6 @@ def pagina_exportar():
     data_fim = st.date_input("Data final", key=f"fim_{uid}")
 
     if st.button("🔎 Gerar relatório por período"):
-
         inicio = data_inicio.strftime("%Y-%m-%d")
         fim = data_fim.strftime("%Y-%m-%d") + " 23:59:59"
 
@@ -567,120 +565,91 @@ def pagina_exportar():
             "data": {"$gte": inicio, "$lte": fim}
         }))
 
-        if not dados:
-            st.warning("Nenhuma ocorrência encontrada no período.")
+        if dados:
+            # DOCX
+            caminho_doc = exportar_ocorrencias_para_word(
+                dados,
+                "relatorio_periodo.docx"
+            )
+
+            with open(caminho_doc, "rb") as f:
+                st.download_button(
+                    "📥 Baixar DOCX",
+                    f.read(),
+                    file_name="relatorio_periodo.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+
+            # PDF
+            caminho_pdf = exportar_ocorrencias_para_pdf(
+                dados,
+                "relatorio_periodo.pdf"
+            )
+
+            with open(caminho_pdf, "rb") as f:
+                st.download_button(
+                    "📥 Baixar PDF",
+                    f.read(),
+                    file_name="relatorio_periodo.pdf",
+                    mime="application/pdf"
+                )
         else:
-            col1, col2 = st.columns(2)
+            st.warning("Nenhuma ocorrência encontrada no período.")
 
-            with col1:
-                caminho_doc = exportar_ocorrencias_para_word(
-                    dados,
-                    "relatorio_periodo.docx"
-                )
-                with open(caminho_doc, "rb") as f:
-                    st.download_button(
-                        "⬇️ Baixar DOCX",
-                        f.read(),
-                        file_name="relatorio_periodo.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-
-            with col2:
-                caminho_pdf = exportar_ocorrencias_para_pdf(
-                    dados,
-                    "relatorio_periodo.pdf"
-                )
-                with open(caminho_pdf, "rb") as f:
-                    st.download_button(
-                        "⬇️ Baixar PDF",
-                        f.read(),
-                        file_name="relatorio_periodo.pdf",
-                        mime="application/pdf"
-                    )
-
-    # ==========================================================
-    # 📄 RELATÓRIOS INDIVIDUAIS
-    # ==========================================================
+    # ===================== AGRUPADO POR ALUNO =====================
     st.subheader("📄 Relatórios Individuais por Aluno")
 
     ocorrencias_por_aluno = {}
-
     for ocorr in resultados:
         nome = ocorr.get("nome", "")
         ocorrencias_por_aluno.setdefault(nome, []).append(ocorr)
 
     for nome, lista in sorted(ocorrencias_por_aluno.items()):
         with st.expander(f"📄 Relatório de {nome}"):
-
             telefone = lista[0].get("telefone", "")
 
-            # ---------------- SELEÇÃO ----------------
-            opcoes = []
-            mapa = {}
-
             for ocorr in lista:
-                texto = f"{ocorr.get('data','')} - {ocorr.get('descricao','')[:40]}"
-                opcoes.append(texto)
-                mapa[texto] = ocorr
+                st.write(f"📅 {ocorr.get('data', '')} - 📝 {ocorr.get('descricao', '')}")
 
-            selecionadas = st.multiselect(
-                "Selecione quais ocorrências deseja imprimir:",
-                opcoes,
-                default=opcoes,
-                key=f"select_{nome}"
-            )
-
-            if not selecionadas:
-                st.warning("Selecione ao menos uma ocorrência.")
-                continue
-
-            dados_filtrados = [mapa[o] for o in selecionadas]
-
-            # ---------------- WHATSAPP ----------------
-            mensagem = formatar_mensagem_whatsapp(dados_filtrados, nome)
-
-            st.text_area(
-                "📋 Mensagem WhatsApp",
-                mensagem,
-                height=200,
-                key=f"msg_{nome}"
-            )
+            mensagem = formatar_mensagem_whatsapp(lista, nome)
+            st.text_area("📋 WhatsApp", mensagem, height=200, key=f"msg_{nome}_{lista[0]['_id']}")
 
             if telefone:
                 numero = telefone.replace("(", "").replace(")", "").replace("-", "").replace(" ", "")
                 link = f"https://api.whatsapp.com/send?phone=55{numero}&text={urllib.parse.quote(mensagem)}"
                 st.markdown(f"[📱 Enviar para {telefone}]({link})")
 
-            # ---------------- DOWNLOAD ----------------
-            col1, col2 = st.columns(2)
+                col1, col2 = st.columns(2)
 
-            with col1:
-                if st.button("📄 Baixar DOCX", key=f"doc_{nome}"):
-                    caminho_doc = exportar_ocorrencias_para_word(
-                        dados_filtrados,
-                        f"relatorio_{nome.replace(' ','_')}.docx"
-                    )
-                    with open(caminho_doc, "rb") as f:
-                        st.download_button(
-                            "⬇️ Download DOCX",
-                            f.read(),
-                            file_name=f"relatorio_{nome.replace(' ','_')}.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
+            # ================= DOCX =================
+            if col1.button("📄 Gerar DOCX", key=f"doc_{nome}_{lista[0]['_id']}"):
+                caminho_doc = exportar_ocorrencias_para_word(
+                    lista,
+                    f"relatorio_{nome.replace(' ','_')}.docx"
+                )
 
-            with col2:
-                if st.button("🧾 Baixar PDF", key=f"pdf_{nome}"):
-                    caminho_pdf = exportar_ocorrencias_para_pdf(
-                        dados_filtrados,
-                        f"relatorio_{nome.replace(' ','_')}.pdf"
+                with open(caminho_doc, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar DOCX",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
-                    with open(caminho_pdf, "rb") as f:
-                        st.download_button(
-                            "⬇️ Download PDF",
-                            f.read(),
-                            file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
-                            mime="application/pdf"
-                        )
+
+            # ================= PDF =================
+            if col2.button("🧾 Gerar PDF", key=f"pdf_{nome}_{lista[0]['_id']}"):
+                caminho_pdf = exportar_ocorrencias_para_pdf(
+                    lista,
+                    f"relatorio_{nome.replace(' ','_')}.pdf"
+                )
+
+                with open(caminho_pdf, "rb") as f:
+                    st.download_button(
+                        "📥 Baixar PDF",
+                        f.read(),
+                        file_name=f"relatorio_{nome.replace(' ','_')}.pdf",
+                        mime="application/pdf"
+                    )
 
 # --- Lista de Alunos ---
 def pagina_lista():
