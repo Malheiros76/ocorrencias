@@ -8,7 +8,7 @@ numpy
 pymongo
 dnspython
 reportlab
-fpdf2
+fpdf2==2.7.8
 python-docx
 streamlit
 pillow
