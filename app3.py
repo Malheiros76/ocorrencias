@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 from docx import Document
 from docx.shared import Inches
 from fpdf import FPDF
+from datetime import date
 import pandas as pd
 import urllib.parse
 import uuid
