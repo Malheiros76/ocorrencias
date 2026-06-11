@@ -292,7 +292,6 @@ def pagina_cadastro():
         min_value=date(1900, 1, 1),
         max_value=date.today(),
         format="DD/MM/YYYY")
-    )
         telefone = st.text_input("Telefone", value=aluno_carregado["telefone"] if aluno_carregado else "")
         responsavel = st.text_input("Responsável", value=aluno_carregado["responsavel"] if aluno_carregado else "")
         turma = st.text_input("Turma", value=aluno_carregado["turma"] if aluno_carregado else "")
