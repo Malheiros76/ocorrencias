@@ -136,7 +136,7 @@ def exportar_ocorrencias_para_word(ocorrencias, nome_arquivo):
     doc = Document()
 
     # ===== BRASÃO CENTRALIZADO =====
-    caminho_logo = os.path.join(os.getcwd(), "BRASÃO1.png")
+    caminho_logo = os.path.join(os.getcwd(), "BRASÃO.png")
     if os.path.exists(caminho_logo):
         paragrafo_logo = doc.add_paragraph()
         paragrafo_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -242,7 +242,7 @@ def exportar_ocorrencias_para_pdf(ocorrencias, nome_arquivo):
     )
 
     # ===== BRASÃO =====
-    caminho_logo = os.path.join(os.getcwd(), "BRASÃO1.png")
+    caminho_logo = os.path.join(os.getcwd(), "BRASÃO.png")
     if os.path.exists(caminho_logo):
         logo = Image(caminho_logo, width=1.5*inch, height=1.5*inch)
         logo.hAlign = 'CENTER'
@@ -1080,7 +1080,7 @@ def pagina_relatorio_estatistico():
 
 # --- Menu Lateral ---
 def menu():
-    st.sidebar.image("BRASÃO1.png", use_container_width=True)
+    st.sidebar.image("BRASÃO.png", use_container_width=True)
     st.sidebar.markdown("### 📚 Menu de Navegação")
     opcoes = [
         "👨‍🎓 Cadastro de Alunos",
